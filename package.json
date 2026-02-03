@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "api-iot": "file:api",
+    "express": "^5.2.1"
+  }
+}

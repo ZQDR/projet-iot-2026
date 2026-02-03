@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # --- Service 1 : La Base de données (MySQL) ---
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: iot_project
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3307:3306"  # Attention : vérifie que tu n'as pas déjà MySQL installé sur ton PC
+
+  # --- Service 2 : L'API (Backend) ---
+  api:
+    build: ./api
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_USER=user
+      - DB_PASS=password
+      - DB_NAME=iot_project
+    depends_on:
+      - db
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+
+  # --- Service 3 : Le Dashboard (Frontend) ---
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html
+
+volumes:
+  db_data:

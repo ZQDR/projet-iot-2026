@@ -1,0 +1,14 @@
+# Dépendances Node.js (c'est lourd, on ne les veut pas)
+node_modules/
+/api/node_modules/
+
+# Fichiers systèmes Mac/Windows
+.DS_Store
+Thumbs.db
+
+# Docker volumes & Database (On ne sauvegarde pas les données utilisateurs sur Git !)
+db_data/
+.env
+
+# Logs
+*.log
