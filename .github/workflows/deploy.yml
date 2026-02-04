@@ -1,26 +1,30 @@
-- name: Deploy via SSH
-  uses: appleboy/ssh-action@master
-  with:
-    host: ${{ secrets.HOST }}
-    username: ${{ secrets.USERNAME }}
-    key: ${{ secrets.KEY }}
-    script: |
-      # 1. Aller dans le dossier du projet
-      mkdir -p ~/Projet-Iot-2026
-      cd ~/Projet-Iot-2026
+name: Deploy via SSH
+on:
+  push:
+    branches: [ "main" ]
 
-      # 2. Récupérer la dernière version du code
-      # Attention : Assurez-vous que l'URL du repo est correcte (ZQDR)
-      if [ -d ".git" ]; then
-        git pull origin main
-      else
-        git clone https://github.com/ZQDR/projet-iot-2026.git .
-      fi
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+            # 1. Dossier
+            mkdir -p ~/Projet-Iot-2026
+            cd ~/Projet-Iot-2026
 
-      # 3. Lancer avec Docker Compose
-      # -d      : Mode "détaché" (tourne en arrière-plan)
-      # --build : Force la reconstruction des images (pour prendre en compte vos modifs de code)
-      docker compose up -d --build
-      
-      # Nettoyage optionnel des vieilles images pour gagner de la place
-      docker image prune -f
+            # 2. Git
+            if [ -d ".git" ]; then
+              git pull origin main
+            else
+              git clone https://github.com/ZQDR/projet-iot-2026.git .
+            fi
+
+            # 3. Docker
+            docker compose up -d --build
+            docker image prune -f
