@@ -40,5 +40,6 @@ services:
     volumes:
       - ./dashboard:/usr/share/nginx/html
 
+
 volumes:
   db_data:

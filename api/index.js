@@ -1,6 +1,15 @@
 const express = require('express');
 const app = express();
 const port = 3000;
+const mqtt = require('mqtt');
+
+const options = {
+    host: '8487c77b02c844dbb8bf01681e09f417.s1.eu.hivemq.cloud', // Ton adresse (copiée de ton image)
+    port: 8883,
+    protocol: 'mqtts', // Le 's' est CRUCIAL (signifie Sécurisé/SSL), sinon ça ne marchera pas
+    username: 'etudiant', // ex: 'etudiant'
+    password: 'Api_client2026',  // Le mot de passe que tu as créé
+};
 
 // Middleware pour pouvoir lire le JSON entrant (req.body)
 app.use(express.json());
@@ -27,4 +36,20 @@ app.post('/data', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Serveur démarré sur http://localhost:${port}`);
+});
+
+const client = mqtt.connect(options);
+
+client.on('connect', function () {
+    console.log('✅ Connecté au broker !');
+   client.subscribe('#', function (err) {
+        if (!err) {
+          
+        }
+    });
+});
+
+client.on('message', function (topic, message) {
+
+    console.log(`📩 Message reçu : ${message.toString()}`);
 });
