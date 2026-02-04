@@ -1,0 +1,33 @@
+name: Auto Deploy to VM
+
+on:
+  push:
+    branches: [ "main" ] 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout du code
+      uses: actions/checkout@v3
+
+    - name: Connexion SSH et Mise à jour
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          # 1. Aller dans le dossier du projet
+          cd /root/TonProjet  # <--- REMPLACE 'TonProjet' PAR LE NOM DE TON DOSSIER
+
+          # 2. Récupérer le dernier code
+          git pull origin main
+
+          # 3. Installer les nouvelles dépendances (si besoin)
+          npm install
+
+          # 4. Redémarrer l'application via PM2
+          # (Assure-toi d'avoir lancé l'app avec PM2 une première fois manuellement)
+          pm2 restart mon-api-mqtt || pm2 start index.js --name "mon-api-mqtt"
