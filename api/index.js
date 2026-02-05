@@ -39,17 +39,23 @@ app.listen(port, () => {
 });
 
 const client = mqtt.connect(options);
-
 client.on('connect', function () {
     console.log('✅ Connecté au broker !');
-   client.subscribe('#', function (err) {
+    
+    // On s'abonne à tout (#) pour être sûr de tout voir
+    client.subscribe('#', function (err) {
         if (!err) {
-          
+            console.log('📡 Abonné à tous les sujets (#)');
+        } else {
+            console.error('❌ Erreur abonnement :', err);
         }
     });
 });
 
+// 👇 C'EST CETTE PARTIE QUI MANQUAIT 👇
 client.on('message', function (topic, message) {
-
-    console.log(`📩 Message reçu : ${message.toString()}`);
+    // message est un Buffer, il faut le convertir en string
+    console.log('--------------------------------');
+    console.log('📩 Reçu sur :', topic);
+    console.log('📦 Contenu :', message.toString());
 });
