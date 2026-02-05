@@ -1,7 +1,11 @@
 name: Deploy via SSH
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - 'feature/*'
+    paths:
+      - 'src/**'
 
 jobs:
   deploy:
