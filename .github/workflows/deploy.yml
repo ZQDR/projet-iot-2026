@@ -3,9 +3,6 @@ on:
   push:
     branches:
       - main
-      - 'feature/*'
-    paths:
-      - 'src/**'
 
 jobs:
   deploy:
@@ -16,7 +13,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
+          key: ${{ secrets.KEY }}     # Attention: vérifiez si votre secret s'appelle KEY ou SSH_KEY sur GitHub
           script: |
             # 1. Dossier
             mkdir -p ~/Projet-Iot-2026
