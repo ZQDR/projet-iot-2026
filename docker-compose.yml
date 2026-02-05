@@ -14,13 +14,15 @@ services:
       - db_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "3307:3306"  # Attention : vérifie que tu n'as pas déjà MySQL installé sur ton PC
+      # J'ai changé 3307 en 3310 pour éviter le blocage
+      - "3310:3306"
 
   # --- Service 2 : L'API (Backend) ---
   api:
     build: ./api
     ports:
-      - "3000:3000"
+      # J'ai changé 3000 en 3005
+      - "3005:3000"
     environment:
       - DB_HOST=db
       - DB_USER=user
@@ -36,10 +38,10 @@ services:
   dashboard:
     build: ./dashboard
     ports:
-      - "8081:80"
+      # J'ai changé 8081 en 8085
+      - "8085:80"
     volumes:
       - ./dashboard:/usr/share/nginx/html
-
 
 volumes:
   db_data:
