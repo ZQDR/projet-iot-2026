@@ -37,8 +37,8 @@ services:
   # --- Service 3 : Le Dashboard (Frontend) ---
   dashboard:
     build: ./dashboard
-    #ports:
-      #- "8085:80"
+    ports:
+      - "8085:80"
     volumes:
       - ./dashboard:/usr/share/nginx/html
 
