@@ -1,14 +1,17 @@
 {
-  "name": "api-iot",
+  "name": "api-iot-recharge",
   "version": "1.0.0",
+  "description": "Backend pour projet recharge connectée - BTS CIEL",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "cors": "^2.8.6",
-    "express": "^4.22.1",
-    "jsonwebtoken": "^9.0.3",
-    "mqtt": "^5.15.0",
-    "mysql2": "^3.17.1",
-    "socket.io": "^4.8.3"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "mqtt": "^5.3.4",
+    "socket.io": "^4.7.4"
   }
 }
