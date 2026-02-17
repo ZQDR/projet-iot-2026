@@ -1,61 +1,101 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mqtt = require('mqtt');
+const cors = require('cors');
+require('dotenv').config(); // Pour lire le fichier .env
+
 const app = express();
 const port = 3000;
-const mqtt = require('mqtt');
 
+// Création du serveur HTTP pour supporter à la fois Express et Socket.io
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Autorise les connexions de n'importe où (Dashboards)
+        methods: ["GET", "POST"]
+    }
+});
+
+// Configuration HiveMQ (Utilise les variables d'environnement si présentes)
 const options = {
-    host: '8487c77b02c844dbb8bf01681e09f417.s1.eu.hivemq.cloud', // Ton adresse (copiée de ton image)
+    host: process.env.HIVEMQ_HOST || '8487c77b02c844dbb8bf01681e09f417.s1.eu.hivemq.cloud',
     port: 8883,
-    protocol: 'mqtts', // Le 's' est CRUCIAL (signifie Sécurisé/SSL), sinon ça ne marchera pas
-    username: 'etudiant', // ex: 'etudiant'
-    password: 'Api_client2026',  // Le mot de passe que tu as créé
+    protocol: 'mqtts',
+    username: process.env.HIVEMQ_USER || 'etudiant',
+    password: process.env.HIVEMQ_PASS || 'Api_client2026',
 };
 
-// Middleware pour pouvoir lire le JSON entrant (req.body)
 app.use(express.json());
+app.use(cors());
 
-// Route GET de base (Accueil)
+// --- ROUTES API ---
+
 app.get('/', (req, res) => {
-  res.json({ message: 'Bienvenue sur ton API !' });
+    res.json({ 
+        message: 'Bienvenue sur ton API !',
+        status: 'OK',
+        websocket_clients: io.engine.clientsCount 
+    });
 });
 
-// Route GET avec un paramètre dynamique
 app.get('/utilisateurs/:id', (req, res) => {
-  const id = Math.cos(parseInt(req.params.id));
-  res.json({ id: id, nom: 'Utilisateur Test' });
+    // Petit calcul pour la physique appliquée (cosinus)
+    const val = Math.cos(parseInt(req.params.id));
+    res.json({ input: req.params.id, calcul: val, nom: 'Utilisateur Test' });
 });
 
-// Route POST (pour recevoir des données)
 app.post('/data', (req, res) => {
-  const donneesRecues = req.body;
-  res.status(201).json({
-    message: 'Données reçues avec succès',
-    data: donneesRecues
-  });
+    const donneesRecues = req.body;
+    res.status(201).json({
+        message: 'Données reçues avec succès',
+        data: donneesRecues
+    });
 });
 
-app.listen(port, () => {
-  console.log(`Serveur démarré sur http://localhost:${port}`);
-});
+// --- CONFIGURATION MQTT ---
 
 const client = mqtt.connect(options);
+
 client.on('connect', function () {
-    console.log('✅ Connecté au broker !');
-    
-    // On s'abonne à tout (#) pour être sûr de tout voir
-    client.subscribe('#', function (err) {
+    console.log('✅ Connecté au broker HiveMQ !');
+    client.subscribe('cielnewton/recharge/#', function (err) {
         if (!err) {
-            console.log('📡 Abonné à tous les sujets (#)');
-        } else {
-            console.error('❌ Erreur abonnement :', err);
+            console.log('📡 Abonné aux flux de recharge');
         }
     });
 });
 
-// 👇 C'EST CETTE PARTIE QUI MANQUAIT 👇
 client.on('message', function (topic, message) {
-    // message est un Buffer, il faut le convertir en string
-    console.log('--------------------------------');
-    console.log('📩 Reçu sur :', topic);
-    console.log('📦 Contenu :', message.toString());
+    const payload = message.toString();
+    console.log(`📩 [MQTT] ${topic} : ${payload}`);
+
+    // --- TRANSFERT VERS WEBSOCKET (Temps Réel) ---
+    // On renvoie l'info immédiatement aux dashboards connectés
+    io.emit('iot_data', {
+        topic: topic,
+        value: payload,
+        time: new Date().toLocaleTimeString()
+    });
+});
+
+client.on('error', (err) => {
+    console.error('❌ Erreur MQTT :', err);
+});
+
+// --- GESTION WEBSOCKETS ---
+
+io.on('connection', (socket) => {
+    console.log(`🔌 Nouveau dashboard connecté : ${socket.id}`);
+    
+    socket.on('disconnect', () => {
+        console.log('❌ Un dashboard s\'est déconnecté');
+    });
+});
+
+// --- LANCEMENT DU SERVEUR ---
+// ⚠️ IMPORTANT : On écoute sur '0.0.0.0' pour que Docker accepte les connexions externes
+server.listen(port, '0.0.0.0', () => {
+    console.log(`🚀 API en ligne sur le port ${port}`);
+    console.log(`🌍 Prêt à recevoir des requêtes de Nginx`);
 });
