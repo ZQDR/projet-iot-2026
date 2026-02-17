@@ -12,20 +12,25 @@ services:
       - db_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      # J'ai changé 3307 en 3310 pour éviter le blocage
-      - "3310:3306"
+      # On lie le port 3310 au localhost pour que seul Workbench (via tunnel SSH) ou Nginx y accèdent
+      - "127.0.0.1:3310:3306"
 
   # --- Service 2 : L'API (Backend) ---
   api:
     build: ./api
+    restart: always
     ports:
-      # J'ai changé 3000 en 3005
-      - "3005:3000"
+      # IMPORTANT : En ajoutant 127.0.0.1, le port 3005 n'est plus accessible depuis Internet
+      - "127.0.0.1:3005:3000"
     environment:
       - DB_HOST=db
       - DB_USER=user
       - DB_PASS=password
       - DB_NAME=iot_project
+      # Ajoute tes clés HiveMQ ici ou via un fichier .env
+      - HIVEMQ_HOST=8487c77b02c844dbb8bf01681e09f417.s1.eu.hivemq.cloud
+      - HIVEMQ_USER=etudiant
+      - HIVEMQ_PASS=Api_client2026
     depends_on:
       - db
     volumes:
@@ -35,8 +40,10 @@ services:
   # --- Service 3 : Le Dashboard (Frontend) ---
   dashboard:
     build: ./dashboard
+    restart: always
     ports:
-      - "8085:80"
+      # Idem pour le dashboard : seul Nginx pourra le servir sur le port 443
+      - "127.0.0.1:8085:80"
     volumes:
       - ./dashboard:/usr/share/nginx/html
 
