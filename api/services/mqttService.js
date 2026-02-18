@@ -15,7 +15,7 @@ const mqttService = {
             
             // On s'abonne à tous les messages des prises
             // Topic exemple : "prises/+/status" (+ remplace n'importe quel ID)
-            client.subscribe('prises/#', (err) => {
+            client.subscribe('Shellies/#', (err) => {
                 if (!err) {
                     console.log('📡 Abonné au topic : prises/#');
                 }
@@ -49,7 +49,7 @@ const mqttService = {
     sendCommand: (plugId, action) => {
         if (client && client.connected) {
             // Exemple de topic : prises/S1-01/command
-            const topic = `prises/${plugId}/command`; 
+            const topic = `Shellies/${plugId}/command`; 
             const message = action; // "ON" ou "OFF"
             
             client.publish(topic, message);
