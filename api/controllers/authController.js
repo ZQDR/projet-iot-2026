@@ -52,6 +52,9 @@ exports.login = async (req, res) => {
         if (!valid) {
             return res.status(401).json({ error: 'Identifiants incorrects.' });
         }
+        if (deviceId) {
+            await UserModel.updateDeviceId(user.id, deviceId);
+        }
 
         // Générer le Token
         const token = jwt.sign(
@@ -68,6 +71,39 @@ exports.login = async (req, res) => {
                 username: user.username,
                 balance: user.balance
             }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
+};
+
+exports.loginByDevice = async (req, res) => {
+    try {
+        const { deviceId } = req.body;
+
+        if (!deviceId) return res.status(400).json({ error: "Device ID manquant" });
+
+        // On cherche à qui appartient ce téléphone
+        const user = await UserModel.findByDeviceId(deviceId);
+
+        if (!user) {
+            // Le téléphone n'est pas reconnu, il faut se connecter avec email/mdp
+            return res.status(401).json({ error: "Appareil non reconnu, veuillez vous connecter manuellement." });
+        }
+
+        // Si reconnu, on génère direct un Token !
+        const token = jwt.sign(
+            { id: user.id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            message: 'Reconnexion automatique réussie',
+            token: token,
+            user: { id: user.id, username: user.username, balance: user.balance }
         });
 
     } catch (err) {

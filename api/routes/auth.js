@@ -8,6 +8,9 @@ const authMiddleware = require('../middleware/authMiddleware'); // On importe le
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
+// Nouvelle route pour l'auto-login
+router.post('/login-device', authController.loginByDevice);
+
 // Privé : Il faut être connecté (avoir un token) pour voir son profil
 router.get('/profile', authMiddleware, authController.getProfile);
 

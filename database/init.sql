@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL, -- Mot de passe hashé
     balance DECIMAL(10, 2) DEFAULT 10.00, -- Crédit initial (ex: 10€)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    device_id VARCHAR(100) NULL
 );
 
 -- 2. TABLE PRISES (PLUGS)

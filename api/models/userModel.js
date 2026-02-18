@@ -30,6 +30,21 @@ class UserModel {
         const [result] = await db.execute(sql, [newBalance, id]);
         return result.affectedRows > 0;
     }
+
+    static async updateDeviceId(userId, deviceId) {
+    const sql = 'UPDATE users SET device_id = ? WHERE id = ?';
+    await db.execute(sql, [deviceId, userId]);
 }
+
+// Ajoute aussi cette méthode pour chercher par DeviceID
+static async findByDeviceId(deviceId) {
+    const sql = 'SELECT * FROM users WHERE device_id = ?';
+    const [rows] = await db.execute(sql, [deviceId]);
+    return rows[0];
+}
+    
+}
+
+
 
 module.exports = UserModel;
