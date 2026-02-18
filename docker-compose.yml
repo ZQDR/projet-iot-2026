@@ -1,5 +1,5 @@
 services:
-  # --- Service 1 : La Base de données (MySQL) ---
+  # --- Service 1 : La Base de données ---
   db:
     image: mysql:8.0
     restart: always
@@ -12,30 +12,38 @@ services:
       - db_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      # On lie le port 3310 au localhost pour que seul Workbench (via tunnel SSH) ou Nginx y accèdent
       - "127.0.0.1:3310:3306"
+    # AJOUT 1 : Le Healthcheck
+    # Docker va vérifier toutes les 5s si MySQL répond au "ping"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # --- Service 2 : L'API (Backend) ---
+  # --- Service 2 : L'API ---
   api:
     build: ./api
+    container_name: projet-2026-api
     restart: always
     ports:
-      # IMPORTANT : En ajoutant 127.0.0.1, le port 3005 n'est plus accessible depuis Internet
       - "127.0.0.1:3005:3000"
     environment:
       - DB_HOST=db
       - DB_USER=user
       - DB_PASS=password
       - DB_NAME=iot_project
-      # Ajoute tes clés HiveMQ ici ou via un fichier .env
       - HIVEMQ_HOST=8487c77b02c844dbb8bf01681e09f417.s1.eu.hivemq.cloud
       - HIVEMQ_USER=etudiant
       - HIVEMQ_PASS=Api_client2026
+    # AJOUT 2 : Condition de démarrage
     depends_on:
-      - db
+      db:
+        condition: service_healthy # L'API attendra que la DB soit "healthy" (prête)
     volumes:
       - ./api:/app
       - /app/node_modules
+    command: npm run dev
 
   # --- Service 3 : Le Dashboard (Frontend) ---
   dashboard:
