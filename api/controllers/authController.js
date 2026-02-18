@@ -39,7 +39,8 @@ exports.register = async (req, res) => {
 // CONNEXION
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        // CORRECTION ICI : On récupère aussi 'deviceId'
+        const { email, password, deviceId } = req.body;
 
         // Chercher l'utilisateur
         const user = await UserModel.findByEmail(email);
@@ -52,13 +53,17 @@ exports.login = async (req, res) => {
         if (!valid) {
             return res.status(401).json({ error: 'Identifiants incorrects.' });
         }
+
+        // --- NOUVEAU : Enregistrement du téléphone ---
         if (deviceId) {
+            // Si l'utilisateur a envoyé un deviceId, on le sauvegarde en BDD
             await UserModel.updateDeviceId(user.id, deviceId);
         }
+        // ----------------------------------------------
 
         // Générer le Token
         const token = jwt.sign(
-            { id: user.id, email: user.email }, // Ce qu'on stocke dans le token
+            { id: user.id, email: user.email },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
