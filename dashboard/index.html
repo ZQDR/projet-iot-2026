@@ -36,9 +36,9 @@
 
         <!-- Main Stats -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Power Card -->
+            <!-- Power Card (Puissance instantanée) -->
             <div class="glass p-6 rounded-3xl border-t-4 border-orange-500">
-                <p class="text-slate-400 text-sm uppercase tracking-wider mb-1">Consommation Instantanée</p>
+                <p class="text-slate-400 text-sm uppercase tracking-wider mb-1">Puissance Instantanée</p>
                 <div class="flex items-baseline gap-2">
                     <span id="power-val" class="text-5xl font-bold text-orange-400">0.0</span>
                     <span class="text-xl text-slate-500 font-semibold">W</span>
@@ -48,17 +48,21 @@
                 </div>
             </div>
 
-            <!-- Energy Card -->
+            <!-- Energy Card (Consommation Cumulée) -->
             <div class="glass p-6 rounded-3xl border-t-4 border-blue-500">
-                <p class="text-slate-400 text-sm uppercase tracking-wider mb-1">Dernier Topic reçu</p>
-                <div id="last-topic" class="text-sm font-mono truncate text-blue-400 mt-2">En attente...</div>
-                <p id="last-time" class="text-xs text-slate-500 mt-4 italic">Aucun message</p>
+                <p class="text-slate-400 text-sm uppercase tracking-wider mb-1">Énergie Consommée ($E=P \cdot t$)</p>
+                <div class="flex items-baseline gap-2">
+                    <span id="energy-val" class="text-5xl font-bold text-blue-400">0.0000</span>
+                    <span class="text-xl text-slate-500 font-semibold">Wh</span>
+                </div>
+                <div id="last-topic" class="text-[10px] font-mono truncate text-slate-500 mt-4">En attente de données...</div>
             </div>
 
             <!-- Relay Status -->
             <div class="glass p-6 rounded-3xl border-t-4 border-emerald-500 flex flex-col justify-center">
                 <p class="text-slate-400 text-sm uppercase tracking-wider mb-2">État du Relais</p>
                 <div id="relay-status" class="text-2xl font-bold text-slate-500 uppercase">Inconnu</div>
+                <p id="last-time" class="text-xs text-slate-500 mt-2 italic">Aucun message reçu</p>
             </div>
         </div>
 
@@ -74,8 +78,9 @@
                     <thead class="text-xs uppercase text-slate-500 bg-slate-900/50">
                         <tr>
                             <th class="px-6 py-3">Heure</th>
-                            <th class="px-6 py-3">Topic Shelly</th>
-                            <th class="px-6 py-3">Donnée brute</th>
+                            <th class="px-6 py-3">ID Prise</th>
+                            <th class="px-6 py-3">Sujet (Topic)</th>
+                            <th class="px-6 py-3">Valeur Brute</th>
                         </tr>
                     </thead>
                     <tbody id="log-table" class="divide-y divide-white/5 font-mono text-sm">
@@ -87,7 +92,6 @@
     </div>
 
     <script>
-        // On attend que la fenêtre soit chargée pour éviter les erreurs "is not defined"
         window.onload = function() {
             // Configuration
             const SOCKET_URL = "https://recharge.cielnewton.fr"; 
@@ -95,8 +99,6 @@
             // Initialisation des icônes Lucide
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
-            } else {
-                console.error("Lucide n'a pas pu être chargé.");
             }
 
             // Connexion au serveur de ton API
@@ -116,35 +118,40 @@
 
                 // Écoute de l'événement "iot_data"
                 socket.on('iot_data', (data) => {
-                    console.log("📩 Donnée Shelly reçue:", data);
+                    console.log("📩 Donnée reçue:", data);
 
                     const topic = data.topic.toLowerCase();
                     const val = data.value;
 
-                    // 1. Détection de la puissance
+                    // 1. Mise à jour de l'Énergie (Nouveauté calculée par ton API)
+                    if (data.energy) {
+                        document.getElementById('energy-val').innerText = data.energy;
+                    }
+
+                    // 2. Détection de la puissance
                     if (topic.includes('power')) {
                         const numVal = parseFloat(val);
                         document.getElementById('power-val').innerText = numVal.toFixed(1);
+                        
+                        // Calcul de la barre de progression (max arbitraire 2500W)
                         const percent = Math.min((numVal / 2500) * 100, 100);
                         document.getElementById('power-bar').style.width = percent + '%';
                     }
 
-                    // 2. Détection de l'état du relais
+                    // 3. Détection de l'état du relais (on/off)
                     if (topic.includes('relay') && !topic.includes('power')) {
                         const statusEl = document.getElementById('relay-status');
                         statusEl.innerText = val.toUpperCase();
                         statusEl.className = val === 'on' ? 'text-2xl font-bold text-emerald-400' : 'text-2xl font-bold text-rose-400';
                     }
 
-                    // 3. Mise à jour des textes
-                    document.getElementById('last-topic').innerText = data.topic;
+                    // 4. Mise à jour des textes d'information
+                    document.getElementById('last-topic').innerText = `Dernier topic : ${data.topic}`;
                     document.getElementById('last-time').innerText = `Reçu à ${data.time}`;
 
-                    // 4. Ajout dans le tableau
+                    // 5. Ajout dans le tableau de monitoring
                     addLogRow(data);
                 });
-            } else {
-                console.error("Socket.io n'a pas pu être chargé.");
             }
         };
 
@@ -155,6 +162,7 @@
             
             row.innerHTML = `
                 <td class="px-6 py-3 text-slate-500">${data.time}</td>
+                <td class="px-6 py-3 font-bold text-blue-400">${data.plugId}</td>
                 <td class="px-6 py-3 font-semibold text-orange-300/80">${data.topic}</td>
                 <td class="px-6 py-3 text-cyan-400">${data.value}</td>
             `;
