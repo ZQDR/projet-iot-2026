@@ -59,7 +59,7 @@ const client = mqtt.connect(options);
 
 client.on('connect', function () {
     console.log('✅ Connecté au broker HiveMQ !');
-    client.subscribe('cielnewton/recharge/#', function (err) {
+    client.subscribe('Shellies/#', function (err) {
         if (!err) {
             console.log('📡 Abonné aux flux de recharge');
         }
