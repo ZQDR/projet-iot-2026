@@ -17,3 +17,53 @@ api/
 │   └── mqttService.js      # Traitement des messages MQTT
 └── middlewares/            # Filtres de sécurité
     └── authMiddleware.js   # Vérifie si l'utilisateur est connecté (JWT)
+
+
+==============================================================================
+
+    ~/Projet-2026/
+├── .env                       # [SECRET] Variables (DB_PASS, HIVEMQ, etc.)
+├── docker-compose.yml         # Chef d'orchestre (Lance API + DB + Dashboard)
+├── .gitignore                 # Doit contenir: node_modules, .env
+│
+├── database/                  # Dossier SQL
+│   └── init.sql               # Script de création des tables (users, plugs...)
+│
+├── dashboard/                 # Dossier Frontend (Site Admin)
+│   ├── index.html             # Page principale
+│   └── (tes fichiers css/js)
+│
+└── api/                       # Dossier Backend (Node.js)
+    ├── index.js               # Point d'entrée (Setup serveur + Routes)
+    ├── package.json           # Liste des modules (express, mysql2, mqtt...)
+    ├── Dockerfile             # Recette pour construire le conteneur API
+    ├── .dockerignore          # Ignore node_modules et .git
+    │
+    ├── config/                # Configurations techniques
+    │   ├── db.js              # Connexion MySQL (Pool sécurisé)
+    │   └── mqtt.js            # Config HiveMQ (Host, User, Pass)
+    │
+    ├── controllers/           # Le "Cerveau" (Logique métier)
+    │   ├── authController.js        # Inscription, Connexion
+    │   ├── plugController.js        # Scan QR, Commande prise
+    │   ├── consumptionController.js # Historique, Graphiques
+    │   ├── paymentController.js     # Gestion PayPal
+    │   └── userController.js        # Profil élève, Solde
+    │
+    ├── models/                # Les "Bras" (Requêtes SQL pures)
+    │   ├── userModel.js             # Requetes sur la table 'users'
+    │   ├── plugModel.js             # Requetes sur la table 'plugs'
+    │   └── consumptionModel.js      # Requetes sur la table 'consumption'
+    │
+    ├── routes/                # L' "Aiguillage" (URLs)
+    │   ├── auth.js              # Route: /api/auth/...
+    │   ├── plugs.js             # Route: /api/plugs/...
+    │   ├── consumption.js       # Route: /api/consumption/...
+    │   └── payments.js          # Route: /api/payments/... (J'ai uniformisé le nom)
+    │
+    ├── services/              # Les "Organes" (Communication ext.)
+    │   ├── mqttService.js       # Gestion HiveMQ (IoT)
+    │   └── socketService.js     # Gestion Socket.io (Temps réel)
+    │
+    └── middleware/            # Les "Vigiles" (Sécurité)
+        └── authMiddleware.js    # Vérifie le Token JWT de l'élève

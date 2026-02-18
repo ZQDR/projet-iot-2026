@@ -1,15 +1,86 @@
-const db = require('../config/db');
+// Fichier: api/controllers/authController.js
+const UserModel = require('../models/userModel');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
+// INSCRIPTION
 exports.register = async (req, res) => {
-    // TODO: Implémenter la création de compte (Hash password, INSERT into users)
-    res.json({ message: "Endpoint d'inscription (À coder)" });
+    try {
+        // On attend 'username' car c'est ton champ SQL
+        const { username, email, password } = req.body;
+
+        // Vérif simple
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: 'Tous les champs sont obligatoires.' });
+        }
+
+        // Vérifier si l'email existe déjà
+        const existingUser = await UserModel.findByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ error: 'Cet email est déjà utilisé.' });
+        }
+
+        // Hasher le mot de passe
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        // Créer l'utilisateur
+        const userId = await UserModel.create(username, email, hash);
+
+        res.status(201).json({ message: 'Utilisateur créé !', userId });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
 };
 
+// CONNEXION
 exports.login = async (req, res) => {
-    // TODO: Vérifier le mot de passe et renvoyer un token JWT
-    res.json({ message: "Endpoint de connexion (À coder)" });
+    try {
+        const { email, password } = req.body;
+
+        // Chercher l'utilisateur
+        const user = await UserModel.findByEmail(email);
+        if (!user) {
+            return res.status(401).json({ error: 'Identifiants incorrects.' });
+        }
+
+        // Vérifier le mot de passe
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+            return res.status(401).json({ error: 'Identifiants incorrects.' });
+        }
+
+        // Générer le Token
+        const token = jwt.sign(
+            { id: user.id, email: user.email }, // Ce qu'on stocke dans le token
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            message: 'Connexion réussie',
+            token: token,
+            user: {
+                id: user.id,
+                username: user.username,
+                balance: user.balance
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
 };
 
+// PROFIL (Sécurisé)
 exports.getProfile = async (req, res) => {
-    res.json({ message: "Profil utilisateur (À coder)" });
+    // req.user.id vient du middleware
+    const user = await UserModel.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    
+    res.json(user);
 };

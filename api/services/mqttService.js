@@ -1,7 +1,6 @@
 // Fichier: services/mqttService.js
 const mqtt = require('mqtt');
 const mqttConfig = require('../config/mqtt'); // On récupère ta config sécurisée
-const socketService = require('./socketService'); // Pour prévenir le dashboard
 
 let client = null;
 
@@ -26,14 +25,6 @@ const mqttService = {
         client.on('message', (topic, message) => {
             const payload = message.toString();
             console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
-
-            // 1. On prévient le Dashboard immédiatement (Temps réel)
-            // Le dashboard recevra un événement 'mqtt_message'
-            socketService.emit('mqtt_message', {
-                topic: topic,
-                data: payload,
-                timestamp: Date.now()
-            });
 
             // TODO : Ici, tu pourrais ajouter une fonction pour sauvegarder 
             // la consommation en Base de Données (via un contrôleur ou un modèle)
