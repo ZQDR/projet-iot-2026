@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const consumptionController = require('../controllers/consumptionController');
 
-router.get('/', consumptionController.getHistory);
+router.get('/', (req, res) => {
+    res.json({ message: "Route Consommation fonctionnelle !" });
+});
 
 module.exports = router;
