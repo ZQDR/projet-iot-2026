@@ -1,0 +1,19 @@
+api/
+├── index.js                # Point d'entrée (démarre le serveur)
+├── .env                    # Variables secrètes (DB, MQTT, API Keys)
+├── package.json            # Dépendances du projet
+├── config/                 # Configurations globales
+│   ├── db.js               # Connexion MySQL (Pool)
+│   └── mqtt.js             # Configuration du client HiveMQ
+├── routes/                 # Définition des URL (Endpoints)
+│   ├── auth.js             # Login, Inscription, Profil
+│   ├── plugs.js            # État des prises, commandes ON/OFF
+│   └── consumption.js      # Historique et calculs d'énergie
+├── controllers/            # Logique métier (Le "cerveau")
+│   ├── userController.js   # Logique de gestion des comptes
+│   └── plugController.js   # Logique de calcul et pilotage
+├── services/               # Services transverses
+│   ├── socketService.js    # Gestion des WebSockets (Socket.io)
+│   └── mqttService.js      # Traitement des messages MQTT
+└── middlewares/            # Filtres de sécurité
+    └── authMiddleware.js   # Vérifie si l'utilisateur est connecté (JWT)
