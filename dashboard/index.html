@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervision Shelly - BTS CIEL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap');
+        body { font-family: 'Urbanist', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .status-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500">
+                    Supervision Borne Shelly
+                </h1>
+                <p class="text-slate-400">Flux MQTT : <span class="font-mono text-amber-500/80">Shellies/#</span></p>
+            </div>
+            <div class="flex gap-3">
+                <div id="api-status" class="glass px-4 py-2 rounded-full flex items-center gap-2 text-sm border-red-500/50">
+                    <span class="w-2 h-2 rounded-full bg-red-500 status-pulse"></span>
+                    Serveur: <span class="font-bold">Déconnecté</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Power Card -->
+            <div class="glass p-6 rounded-3xl border-t-4 border-orange-500">
+                <p class="text-slate-400 text-sm uppercase tracking-wider mb-1">Consommation Instantanée</p>
+                <div class="flex items-baseline gap-2">
+                    <span id="power-val" class="text-5xl font-bold text-orange-400">0.0</span>
+                    <span class="text-xl text-slate-500 font-semibold">W</span>
+                </div>
+                <div class="mt-4 h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="power-bar" class="h-full bg-orange-500 transition-all duration-700" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Energy Card -->
+            <div class="glass p-6 rounded-3xl border-t-4 border-blue-500">
+                <p class="text-slate-400 text-sm uppercase tracking-wider mb-1">Dernier Topic reçu</p>
+                <div id="last-topic" class="text-sm font-mono truncate text-blue-400 mt-2">En attente...</div>
+                <p id="last-time" class="text-xs text-slate-500 mt-4 italic">Aucun message</p>
+            </div>
+
+            <!-- Relay Status -->
+            <div class="glass p-6 rounded-3xl border-t-4 border-emerald-500 flex flex-col justify-center">
+                <p class="text-slate-400 text-sm uppercase tracking-wider mb-2">État du Relais</p>
+                <div id="relay-status" class="text-2xl font-bold text-slate-500 uppercase">Inconnu</div>
+            </div>
+        </div>
+
+        <!-- Live Feed -->
+        <div class="glass rounded-3xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+                <h3 class="font-bold flex items-center gap-2 text-orange-400">
+                    <i data-lucide="activity" class="w-5 h-5"></i> Moniteur de bus Shellies
+                </h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="text-xs uppercase text-slate-500 bg-slate-900/50">
+                        <tr>
+                            <th class="px-6 py-3">Heure</th>
+                            <th class="px-6 py-3">Topic Shelly</th>
+                            <th class="px-6 py-3">Donnée brute</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table" class="divide-y divide-white/5 font-mono text-sm">
+                        <!-- Rempli par Socket.io -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // On attend que la fenêtre soit chargée pour éviter les erreurs "is not defined"
+        window.onload = function() {
+            // Configuration
+            const SOCKET_URL = "https://recharge.cielnewton.fr"; 
+
+            // Initialisation des icônes Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            } else {
+                console.error("Lucide n'a pas pu être chargé.");
+            }
+
+            // Connexion au serveur de ton API
+            if (typeof io !== 'undefined') {
+                const socket = io(SOCKET_URL, {
+                    path: '/socket.io/'
+                });
+
+                socket.on('connect', () => {
+                    updateStatusDisplay(true);
+                    console.log("✅ Lié à l'API via WebSocket");
+                });
+
+                socket.on('disconnect', () => {
+                    updateStatusDisplay(false);
+                });
+
+                // Écoute de l'événement "iot_data"
+                socket.on('iot_data', (data) => {
+                    console.log("📩 Donnée Shelly reçue:", data);
+
+                    const topic = data.topic.toLowerCase();
+                    const val = data.value;
+
+                    // 1. Détection de la puissance
+                    if (topic.includes('power')) {
+                        const numVal = parseFloat(val);
+                        document.getElementById('power-val').innerText = numVal.toFixed(1);
+                        const percent = Math.min((numVal / 2500) * 100, 100);
+                        document.getElementById('power-bar').style.width = percent + '%';
+                    }
+
+                    // 2. Détection de l'état du relais
+                    if (topic.includes('relay') && !topic.includes('power')) {
+                        const statusEl = document.getElementById('relay-status');
+                        statusEl.innerText = val.toUpperCase();
+                        statusEl.className = val === 'on' ? 'text-2xl font-bold text-emerald-400' : 'text-2xl font-bold text-rose-400';
+                    }
+
+                    // 3. Mise à jour des textes
+                    document.getElementById('last-topic').innerText = data.topic;
+                    document.getElementById('last-time').innerText = `Reçu à ${data.time}`;
+
+                    // 4. Ajout dans le tableau
+                    addLogRow(data);
+                });
+            } else {
+                console.error("Socket.io n'a pas pu être chargé.");
+            }
+        };
+
+        function addLogRow(data) {
+            const table = document.getElementById('log-table');
+            const row = table.insertRow(0);
+            row.className = "hover:bg-white/5 transition-colors";
+            
+            row.innerHTML = `
+                <td class="px-6 py-3 text-slate-500">${data.time}</td>
+                <td class="px-6 py-3 font-semibold text-orange-300/80">${data.topic}</td>
+                <td class="px-6 py-3 text-cyan-400">${data.value}</td>
+            `;
+
+            if (table.rows.length > 15) table.deleteRow(15);
+        }
+
+        function updateStatusDisplay(connected) {
+            const el = document.getElementById('api-status');
+            const dot = el.querySelector('span:first-child');
+            const label = el.querySelector('span:last-child');
+            
+            if (connected) {
+                el.classList.replace('border-red-500/50', 'border-emerald-500/50');
+                dot.classList.replace('bg-red-500', 'bg-emerald-500');
+                label.innerText = 'En ligne';
+            } else {
+                el.classList.replace('border-emerald-500/50', 'border-red-500/50');
+                dot.classList.replace('bg-emerald-500', 'bg-red-500');
+                label.innerText = 'Hors ligne';
+            }
+        }
+    </script>
+</body>
+</html>
