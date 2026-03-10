@@ -45,22 +45,25 @@ const mqttService = {
                 return;
             }
 
+            // --- AJOUT DYNAMIQUE ET PING ---
             try {
-                // --- AJOUT DYNAMIQUE DE LA PRISE ---
+                // 1. Vérification existence
                 const [rows] = await db.execute('SELECT id FROM plugs WHERE id = ?', [plugId]);
+                
                 if (rows.length === 0) {
-                    // C'est une nouvelle prise, on l'ajoute !
-                    await db.execute('INSERT INTO plugs (id, status, state) VALUES (?, "libre", 0)', [plugId]);
-                    console.log(`🔌 Nouvelle prise détectée et ajoutée à la base de données : ${plugId}`);
-                    // On notifie le dashboard pour qu'il se mette à jour
-                    socketService.emit('new_plug_added', { id: plugId });
+                    // 2. Tentative d'insertion (isolée dans un try/catch pour ne pas tout bloquer)
+                    try {
+                        await db.execute('INSERT INTO plugs (id, status, state) VALUES (?, "libre", 0)', [plugId]);
+                        console.log(`🔌 Nouvelle prise détectée et ajoutée : ${plugId}`);
+                        socketService.emit('new_plug_added', { id: plugId });
+                    } catch (insertErr) {
+                        console.error(`❌ ERREUR CRITIQUE : Impossible d'ajouter la prise ${plugId}. La base de données refuse cet ID (trop long ?).`, insertErr.message);
+                        return; // Stop ici, on ne peut pas mettre à jour une prise qui n'existe pas
+                    }
                 }
 
-                // --- MISE À JOUR DU LAST_PING ---
-                // On met à jour le timestamp de dernière communication à chaque message reçu
-                await db.execute('UPDATE plugs SET last_ping = CURRENT_TIMESTAMP WHERE id = ?', [plugId]);
-
-                // ------------------------------------
+                // 3. Mise à jour du Last Ping
+                await db.execute('UPDATE plugs SET last_ping = NOW() WHERE id = ?', [plugId]);
 
                 console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
                 const type = topicParts[2];
@@ -93,8 +96,8 @@ const mqttService = {
                         // Ce n'était pas du JSON valide, on ignore silencieusement
                     }
                 }
-            } catch (e) {
-                console.error(`Erreur lors du traitement du message MQTT pour ${plugId}:`, e);
+            } catch (globalErr) {
+                console.error(`Erreur générale traitement MQTT pour ${plugId}:`, globalErr);
             }
         });
 
