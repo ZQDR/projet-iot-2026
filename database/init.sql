@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS plugs (
     id VARCHAR(50) PRIMARY KEY, -- Augmenté pour supporter les ID Shelly longs (ex: shellyplusplugs-e465b8b82e18)
     status ENUM('libre', 'occupied', 'hs') DEFAULT 'libre', -- État pour l'appli
     state BOOLEAN DEFAULT FALSE, -- État électrique (TRUE = ON, FALSE = OFF)
-    last_ping TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Pour détecter si la prise est hors ligne
+    last_ping TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Pour détecter si la prise est hors ligne
 );
 
 -- 3. TABLE HISTORIQUE (CONSUMPTION)
