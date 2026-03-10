@@ -21,7 +21,8 @@ jobs:
 
             # 2. Git
             if [ -d ".git" ]; then
-              git pull origin main
+              git fetch origin
+              git reset --hard origin/main
             else
               git clone https://github.com/ZQDR/projet-iot-2026.git .
             fi
