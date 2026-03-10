@@ -83,8 +83,11 @@ exports.generateQrCode = async (req, res) => {
     try {
         const { plugId } = req.params;
 
-        // Note : Pour plus de robustesse, on pourrait vérifier ici si la prise existe
-        // en utilisant `PlugModel.findById(plugId)`.
+        // Amélioration : On vérifie que la prise existe avant de générer l'image
+        const plug = await PlugModel.findById(plugId);
+        if (!plug) {
+            return res.status(404).send("Prise non trouvée");
+        }
 
         // Génère le QR code sous forme de buffer PNG
         const buffer = await qrcode.toBuffer(plugId, { type: 'png' });
