@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- 2. TABLE PRISES (PLUGS)
 -- Stocke l'état physique (ON/OFF) et le statut de disponibilité
 CREATE TABLE IF NOT EXISTS plugs (
-    id VARCHAR(20) PRIMARY KEY, -- Ex: 'S1-01' comme sur le schéma
+    id VARCHAR(50) PRIMARY KEY, -- Augmenté pour supporter les ID Shelly longs (ex: shellyplusplugs-e465b8b82e18)
     status ENUM('libre', 'occupied', 'hs') DEFAULT 'libre', -- État pour l'appli
     state BOOLEAN DEFAULT FALSE, -- État électrique (TRUE = ON, FALSE = OFF)
     last_ping TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Pour détecter si la prise est hors ligne
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS plugs (
 CREATE TABLE IF NOT EXISTS consumption (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
-    plug_id VARCHAR(20),
+    plug_id VARCHAR(50),
     start_time DATETIME NOT NULL,
     end_time DATETIME,
     energy_kwh FLOAT DEFAULT 0, -- Consommation en kWh

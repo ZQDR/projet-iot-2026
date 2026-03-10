@@ -25,7 +25,7 @@ services:
     container_name: projet-2026-api
     restart: always
     ports:
-      - "127.0.0.1:3005:3000" # Ports INCHANGÉS
+      - "3005:3000"
     environment:
       # SURCHARGE POUR DOCKER (Prioritaire sur le .env)
       - DB_HOST=db
@@ -52,9 +52,10 @@ services:
     build: ./dashboard
     restart: always
     ports:
-      - "127.0.0.1:8085:80" # Ports INCHANGÉS
+      - "8085:80"
     volumes:
       - ./dashboard:/usr/share/nginx/html
+      - ./dashboard/nginx.conf:/etc/nginx/conf.d/default.conf # <-- On injecte notre config
 
 volumes:
   db_data:

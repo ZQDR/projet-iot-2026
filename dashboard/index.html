@@ -34,7 +34,8 @@
             <p class="text-muted">Supervision en temps réel des prises connectées.</p>
         </div>
         <div class="col-auto">
-            <button class="btn btn-outline-primary" onclick="loadPlugs()"><i class="fas fa-sync"></i> Actualiser</button>
+            <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addPlugModal"><i class="fas fa-plus"></i> Ajouter une prise</button>
+            <button class="btn btn-outline-primary" onclick="loadPlugs()"><i class="fas fa-sync"></i></button>
         </div>
     </div>
 
@@ -47,12 +48,48 @@
     </div>
 </div>
 
+<!-- Modal Ajouter Prise -->
+<div class="modal fade" id="addPlugModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter une nouvelle prise</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPlugForm">
+                    <div class="mb-3">
+                        <label for="newPlugId" class="form-label">Identifiant de la prise (ID)</label>
+                        <input type="text" class="form-control" id="newPlugId" placeholder="ex: S1-05 ou shellyplug-s-123456" required>
+                        <div class="form-text">Doit correspondre à l'ID MQTT de la prise Shelly.</div>
+                    </div>
+                    <div class="alert alert-danger d-none" id="addError"></div>
+                    <button type="submit" class="btn btn-primary w-100">Enregistrer & Créer QR</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">Notification</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastMessage"></div>
+  </div>
+</div>
+
 <!-- Socket.io Client -->
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Configuration : Adapter l'URL si l'API n'est pas sur le même port/domaine
-    // On laisse vide pour utiliser une URL relative. Le navigateur contactera le même serveur qui a servi cette page.
-    const API_URL = ''; 
+    // GRÂCE À NGINX : On utilise une URL relative. 
+    // Le navigateur parle au port 8085, et Nginx transmet à l'API en interne.
+    const API_URL = '';
     
     // Connexion WebSocket
     const socket = io(API_URL);
@@ -74,15 +111,23 @@
         }
     });
 
+    // NOUVEAU : Écoute de l'ajout d'une nouvelle prise par le serveur
+    socket.on('new_plug_added', (data) => {
+        console.log('Nouvelle prise détectée par le serveur:', data.id);
+        showToast(`Nouvelle prise "${data.id}" détectée et ajoutée !`);
+        loadPlugs(); // On recharge la liste pour afficher la nouvelle carte
+    });
+
     // Fonction pour charger les prises depuis l'API
     async function loadPlugs() {
         try {
             const response = await fetch(`${API_URL}/api/plugs`);
+            if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
             const plugs = await response.json();
             renderPlugs(plugs);
         } catch (error) {
             console.error("Erreur chargement:", error);
-            document.getElementById('plugs-container').innerHTML = `<div class="alert alert-danger">Impossible de charger les prises. L'API est-elle lancée ?</div>`;
+            document.getElementById('plugs-container').innerHTML = `<div class="alert alert-danger">❌ Impossible de contacter l'API.<br>Vérifiez que les conteneurs Docker tournent bien.</div>`;
         }
     }
 
@@ -120,6 +165,45 @@
             `;
             container.innerHTML += cardHtml;
         });
+    }
+
+    // Gestion du formulaire d'ajout
+    document.getElementById('addPlugForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const plugId = document.getElementById('newPlugId').value.trim();
+        const errorDiv = document.getElementById('addError');
+        
+        if(!plugId) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/plugs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plugId })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || "Erreur inconnue");
+
+            // Succès
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addPlugModal'));
+            modal.hide();
+            document.getElementById('newPlugId').value = '';
+            errorDiv.classList.add('d-none');
+            loadPlugs(); // Recharger la liste
+            showToast(`Prise ${plugId} ajoutée !`);
+        } catch (err) {
+            errorDiv.innerText = err.message;
+            errorDiv.classList.remove('d-none');
+        }
+    });
+
+    function showToast(message) {
+        const toastEl = document.getElementById('liveToast');
+        document.getElementById('toastMessage').innerText = message;
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
     }
 
     // Chargement initial
