@@ -41,10 +41,10 @@ const waitForDb = async () => {
     socketService.init(server);
     mqttService.connect(); 
 
-    app.use('/api/auth', require('./routes/auth'));
-    app.use('/api/plugs', require('./routes/plugs'));
-    app.use('/api/consumption', require('./routes/consumption'));
-    app.use('/api/payments', require('./routes/paymentRoutes'));
+    app.use('/auth', require('./routes/auth'));
+    app.use('/plugs', require('./routes/plugs'));
+    app.use('/consumption', require('./routes/consumption'));
+    app.use('/payments', require('./routes/payments'));
 
     app.get('/', (req, res) => {
         res.json({ 
