@@ -60,11 +60,21 @@ const mqttService = {
 
                 // Si c'est un message de puissance (selon le modèle de la prise)
                 if (type === 'relay' || type === 'power') {
-                    // Souvent les prises envoient du JSON : {"power": 20.5, "ison": true}
-                    const data = JSON.parse(payload);
-                    if (data.power !== undefined) {
-                        // Envoi immédiat au Dashboard pour l'affichage en temps réel
-                        socketService.emit('power_update', { plugId, power: data.power });
+                    try {
+                        const data = JSON.parse(payload);
+
+                        // 1. Gestion de la Puissance (Script 1 & 2)
+                        if (data.power !== undefined) {
+                            socketService.emit('power_update', { plugId, power: data.power });
+                        }
+
+                        // 2. Gestion de l'État ON/OFF (Script 3 : { "state": "on" })
+                        if (data.state !== undefined) {
+                            const ison = (data.state === 'on');
+                            await db.execute('UPDATE plugs SET state = ? WHERE id = ?', [ison, plugId]);
+                        }
+                    } catch (jsonErr) {
+                        // Ce n'était pas du JSON valide, on ignore silencieusement
                     }
                 }
             } catch (e) {
