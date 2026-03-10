@@ -19,6 +19,8 @@ const mqttService = {
             client.subscribe('Shellies/#', (err) => {
                 if (!err) {
                     console.log('📡 Abonné au topic : Shellies/#');
+                    // Au démarrage, on éteint toutes les prises qui ne sont pas utilisées pour économiser l'énergie
+                    mqttService.turnOffUnusedPlugs();
                 }
             });
         });
@@ -53,6 +55,11 @@ const mqttService = {
                     // On notifie le dashboard pour qu'il se mette à jour
                     socketService.emit('new_plug_added', { id: plugId });
                 }
+
+                // --- MISE À JOUR DU LAST_PING ---
+                // On met à jour le timestamp de dernière communication à chaque message reçu
+                await db.execute('UPDATE plugs SET last_ping = CURRENT_TIMESTAMP WHERE id = ?', [plugId]);
+
                 // ------------------------------------
 
                 console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
@@ -72,6 +79,15 @@ const mqttService = {
                         if (data.state !== undefined) {
                             const ison = (data.state === 'on');
                             await db.execute('UPDATE plugs SET state = ? WHERE id = ?', [ison, plugId]);
+
+                            // SÉCURITÉ : Si la prise s'allume alors qu'elle est libre, on l'éteint immédiatement
+                            if (ison) {
+                                const [statusRows] = await db.execute('SELECT status FROM plugs WHERE id = ?', [plugId]);
+                                if (statusRows.length > 0 && statusRows[0].status === 'libre') {
+                                    console.log(`⚠️ Prise ${plugId} allumée mais libre -> Extinction forcée.`);
+                                    mqttService.turnOff(plugId);
+                                }
+                            }
                         }
                     } catch (jsonErr) {
                         // Ce n'était pas du JSON valide, on ignore silencieusement
@@ -109,6 +125,22 @@ const mqttService = {
             console.log(`📤 Commande envoyée : ${message} -> ${topic}`);
         } else {
             console.error("⚠️ Impossible d'envoyer la commande : Client MQTT déconnecté.");
+        }
+    },
+
+    // Fonction pour éteindre toutes les prises marquées comme "libre"
+    turnOffUnusedPlugs: async () => {
+        try {
+            console.log("🧹 Nettoyage : Extinction des prises inutilisées...");
+            const [rows] = await db.execute("SELECT id FROM plugs WHERE status = 'libre'");
+            
+            for (const plug of rows) {
+                mqttService.turnOff(plug.id);
+                // On force l'état à 0 en base de données par précaution
+                await db.execute('UPDATE plugs SET state = 0 WHERE id = ?', [plug.id]);
+            }
+        } catch (err) {
+            console.error("Erreur lors du nettoyage des prises:", err);
         }
     }
 };
