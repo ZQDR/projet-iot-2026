@@ -16,8 +16,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}     # Attention: vérifiez si votre secret s'appelle KEY ou SSH_KEY sur GitHub
           script: |
             # 1. Dossier
-            mkdir -p ~/Projet-Iot-2026
-            cd ~/Projet-Iot-2026
+            mkdir -p ~/Projet-2026
+            cd ~/Projet-2026
 
             # 2. Git
             if [ -d ".git" ]; then
