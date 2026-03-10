@@ -2,6 +2,7 @@
 const mqtt = require('mqtt');
 const mqttConfig = require('../config/mqtt'); // On récupère ta config sécurisée
 const socketService = require('./socketService'); // Lien vers le WebSocket
+const db = require('../config/db');
 
 let client = null;
 
@@ -23,28 +24,42 @@ const mqttService = {
         });
 
         // QUAND ON REÇOIT UN MESSAGE D'UNE PRISE
-        client.on('message', (topic, message) => {
+        client.on('message', async (topic, message) => {
             const payload = message.toString();
-            console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
 
             // Analyse du topic pour trouver l'ID de la prise (ex: Shellies/S1-01/status)
             const topicParts = topic.split('/');
-            const plugId = topicParts[1]; // "S1-01"
-            const type = topicParts[2];   // "status" ou "command" ou "power"
+            if (topicParts.length < 2) return; // Topic invalide, on ignore
+            
+            const plugId = topicParts[1];
+            if (!plugId) return; // ID de prise vide, on ignore
 
-            // Si c'est un message de puissance (selon le modèle de la prise)
-            if (type === 'relay' || type === 'power') {
-                try {
+            try {
+                // --- AJOUT DYNAMIQUE DE LA PRISE ---
+                const [rows] = await db.execute('SELECT id FROM plugs WHERE id = ?', [plugId]);
+                if (rows.length === 0) {
+                    // C'est une nouvelle prise, on l'ajoute !
+                    await db.execute('INSERT INTO plugs (id, status, state) VALUES (?, "libre", 0)', [plugId]);
+                    console.log(`🔌 Nouvelle prise détectée et ajoutée à la base de données : ${plugId}`);
+                    // On notifie le dashboard pour qu'il se mette à jour
+                    socketService.emit('new_plug_added', { id: plugId });
+                }
+                // ------------------------------------
+
+                console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
+                const type = topicParts[2];
+
+                // Si c'est un message de puissance (selon le modèle de la prise)
+                if (type === 'relay' || type === 'power') {
                     // Souvent les prises envoient du JSON : {"power": 20.5, "ison": true}
                     const data = JSON.parse(payload);
-
                     if (data.power !== undefined) {
                         // Envoi immédiat au Dashboard pour l'affichage en temps réel
                         socketService.emit('power_update', { plugId, power: data.power });
                     }
-                } catch (e) {
-                    // Ce n'était pas du JSON, on ignore
                 }
+            } catch (e) {
+                console.error(`Erreur lors du traitement du message MQTT pour ${plugId}:`, e);
             }
         });
 
