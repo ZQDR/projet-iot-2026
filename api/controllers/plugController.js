@@ -112,3 +112,20 @@ exports.getAllPlugs = async (req, res) => {
         res.status(500).json({ error: "Impossible de récupérer les prises." });
     }
 };
+
+// --- POUR L'ADMIN : AJOUTER UNE NOUVELLE PRISE ---
+exports.createPlug = async (req, res) => {
+    try {
+        const { plugId } = req.body;
+        if (!plugId) return res.status(400).json({ error: "L'ID de la prise est requis." });
+
+        // On insère la prise (si elle n'existe pas déjà, sinon erreur SQL gérée par le catch ou on pourrait vérifier avant)
+        // On initialise à 'libre' et 'FALSE' (éteint)
+        await db.execute('INSERT INTO plugs (id, status, state) VALUES (?, "libre", 0)', [plugId]);
+
+        res.status(201).json({ message: "Prise ajoutée avec succès.", plugId });
+    } catch (err) {
+        console.error("Erreur création prise:", err);
+        res.status(500).json({ error: "Erreur lors de la création (ID déjà existant ?)." });
+    }
+};

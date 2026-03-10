@@ -15,6 +15,10 @@ router.post('/stop', authMiddleware, plugController.stopCharge);
 // GET /api/plugs
 router.get('/', plugController.getAllPlugs);
 
+// Route pour ajouter une nouvelle prise (Admin)
+// POST /api/plugs
+router.post('/', plugController.createPlug);
+
 // Route pour générer le QR code d'une prise (publique/administrative)
 // GET /api/plugs/S1-01/qrcode
 router.get('/:plugId/qrcode', plugController.generateQrCode);
