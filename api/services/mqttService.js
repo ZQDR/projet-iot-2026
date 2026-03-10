@@ -14,10 +14,10 @@ const mqttService = {
             console.log('✅ Connecté au broker MQTT HiveMQ !');
             
             // On s'abonne à tous les messages des prises
-            // Topic exemple : "prises/+/status" (+ remplace n'importe quel ID)
+            // Topic exemple : "Shellies/+/status" (+ remplace n'importe quel ID)
             client.subscribe('Shellies/#', (err) => {
                 if (!err) {
-                    console.log('📡 Abonné au topic : prises/#');
+                    console.log('📡 Abonné au topic : Shellies/#');
                 }
             });
         });
@@ -67,7 +67,7 @@ const mqttService = {
     // Utilisée par le contrôleur quand l'élève scanne le QR Code
     sendCommand: (plugId, action) => {
         if (client && client.connected) {
-            // Exemple de topic : prises/S1-01/command
+            // Exemple de topic : Shellies/S1-01/command
             const topic = `Shellies/${plugId}/command`; 
             const message = action; // "ON" ou "OFF"
             
