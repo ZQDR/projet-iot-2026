@@ -34,6 +34,15 @@ const mqttService = {
             const plugId = topicParts[1];
             if (!plugId) return; // ID de prise vide, on ignore
 
+            // --- NOUVEAU : Filtre pour éviter les faux positifs ---
+            // On définit une liste de mots-clés qui sont des parties de topics, mais pas des ID de prises.
+            const nonDeviceKeywords = ['online', 'status', 'command', 'announce', 'relay', 'power', 'energy', 'apower', 'test'];
+            if (nonDeviceKeywords.includes(plugId)) {
+                // Ce message est sur un topic générique (ex: "Shellies/online"), on l'ignore pour l'auto-découverte.
+                console.log(`📢 Message sur un topic générique ignoré pour l'auto-découverte : ${topic}`);
+                return;
+            }
+
             try {
                 // --- AJOUT DYNAMIQUE DE LA PRISE ---
                 const [rows] = await db.execute('SELECT id FROM plugs WHERE id = ?', [plugId]);
