@@ -44,7 +44,7 @@ const waitForDb = async () => {
     app.use('/auth', require('./routes/auth'));
     app.use('/plugs', require('./routes/plugs'));
     app.use('/consumption', require('./routes/consumption'));
-    app.use('/payments', require('./routes/payments'));
+    app.use('/payments', require('./routes/paymentRoutes'));
 
     app.get('/', (req, res) => {
         res.json({ 
