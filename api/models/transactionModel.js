@@ -1,20 +1,18 @@
-// Fichier: api/models/transactionModel.js
 const db = require('../config/db');
 
 class TransactionModel {
-    
-    // Enregistrer un mouvement d'argent
+
+    /**
+     * Crée un enregistrement de transaction (recharge, dépense, etc.)
+     * @param {number} userId - ID de l'utilisateur
+     * @param {string} type - 'recharge' ou 'depense'
+     * @param {number} amount - Montant de la transaction
+     * @param {string} description - Description (ex: 'Rechargement PayPal (ID_ORDER)')
+     */
     static async create(userId, type, amount, description) {
-        const sql = 'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)';
+        const sql = 'INSERT INTO transactions (user_id, type, amount, description, date) VALUES (?, ?, ?, ?, NOW())';
         const [result] = await db.execute(sql, [userId, type, amount, description]);
         return result.insertId;
-    }
-
-    // Récupérer l'historique financier d'un élève (Pour l'appli de Mehdi)
-    static async getUserHistory(userId) {
-        const sql = 'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC';
-        const [rows] = await db.execute(sql, [userId]);
-        return rows;
     }
 }
 

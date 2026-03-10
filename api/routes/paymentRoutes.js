@@ -4,7 +4,7 @@ const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const authMiddleware = require('../middleware/authMiddleware'); // Sécurité obligatoire
 
-// Route: POST /api/payments/topup
+// Route: POST /api/payments/create-order
 // 1. Créer la commande (L'utilisateur veut payer X euros)
 router.post('/create-order', authMiddleware, paymentController.createPayPalOrder);
 
