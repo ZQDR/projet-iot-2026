@@ -28,6 +28,23 @@ exports.capturePayPalOrder = async (req, res) => {
         const userId = req.user.id;
         const { orderId } = req.body; // L'ID que PayPal a donné
 
+        // --- DEBUT CODE DE TEST (A RETIRER EN PROD) ---
+        // Si l'ID est "TEST_50", on simule un paiement de 50€
+        if (orderId && orderId.startsWith('TEST_')) {
+            const amountFloat = parseFloat(orderId.split('_')[1]);
+            const user = await UserModel.findById(userId);
+            const newBalance = parseFloat(user.balance) + amountFloat;
+
+            await UserModel.updateBalance(userId, newBalance);
+            await TransactionModel.create(userId, 'recharge', amountFloat, `Simulation PayPal (${orderId})`);
+
+            return res.json({
+                message: 'Paiement SIMULÉ réussi ! Solde mis à jour.',
+                newBalance: newBalance.toFixed(2)
+            });
+        }
+        // --- FIN CODE DE TEST ---
+
         // On demande à PayPal de valider la transaction
         const request = paypalService.captureOrderRequest(orderId);
         const capture = await paypalService.client.execute(request);
