@@ -25,7 +25,7 @@ const mqttService = {
         // QUAND ON REÇOIT UN MESSAGE D'UNE PRISE
         client.on('message', (topic, message) => {
             const payload = message.toString();
-            // console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
+            console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
 
             // Analyse du topic pour trouver l'ID de la prise (ex: Shellies/S1-01/status)
             const topicParts = topic.split('/');
