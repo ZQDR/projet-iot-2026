@@ -1,3 +1,4 @@
+// Fichier: api/routes/plugs.js
 const express = require('express');
 const router = express.Router();
 const plugController = require('../controllers/plugController');
@@ -10,10 +11,6 @@ router.post('/start', authMiddleware, plugController.scanAndStart);
 // Route pour arrêter une charge (protégée)
 // POST /api/plugs/stop
 router.post('/stop', authMiddleware, plugController.stopCharge);
-
-// Route pour récupérer toutes les prises (Dashboard Admin)
-// GET /api/plugs
-router.get('/', plugController.getAllPlugs);
 
 // Route pour générer le QR code d'une prise (publique/administrative)
 // GET /api/plugs/S1-01/qrcode

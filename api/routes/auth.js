@@ -7,7 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware'); // On importe le
 // Public : Tout le monde peut s'inscrire ou se connecter
 router.post('/register', authController.register);
 router.post('/login', authController.login);
-
+    
 // Nouvelle route pour l'auto-login
 router.post('/login-device', authController.loginByDevice);
 

@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const consumptionController = require('../controllers/consumptionController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-router.get('/', (req, res) => {
-    res.json({ message: "Route Consommation fonctionnelle !" });
-});
+// Route pour récupérer l'historique de l'utilisateur connecté
+// GET /api/consumption
+router.get('/', authMiddleware, consumptionController.getHistory);
 
 module.exports = router;

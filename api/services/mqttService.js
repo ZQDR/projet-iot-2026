@@ -1,6 +1,7 @@
 // Fichier: services/mqttService.js
 const mqtt = require('mqtt');
 const mqttConfig = require('../config/mqtt'); // On récupère ta config sécurisée
+const socketService = require('./socketService'); // Lien vers le WebSocket
 
 let client = null;
 
@@ -24,15 +25,42 @@ const mqttService = {
         // QUAND ON REÇOIT UN MESSAGE D'UNE PRISE
         client.on('message', (topic, message) => {
             const payload = message.toString();
-            console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
+            // console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
 
-            // TODO : Ici, tu pourrais ajouter une fonction pour sauvegarder 
-            // la consommation en Base de Données (via un contrôleur ou un modèle)
+            // Analyse du topic pour trouver l'ID de la prise (ex: Shellies/S1-01/status)
+            const topicParts = topic.split('/');
+            const plugId = topicParts[1]; // "S1-01"
+            const type = topicParts[2];   // "status" ou "command" ou "power"
+
+            // Si c'est un message de puissance (selon le modèle de la prise)
+            if (type === 'relay' || type === 'power') {
+                try {
+                    // Souvent les prises envoient du JSON : {"power": 20.5, "ison": true}
+                    const data = JSON.parse(payload);
+
+                    if (data.power !== undefined) {
+                        // Envoi immédiat au Dashboard pour l'affichage en temps réel
+                        socketService.emit('power_update', { plugId, power: data.power });
+                    }
+                } catch (e) {
+                    // Ce n'était pas du JSON, on ignore
+                }
+            }
         });
 
         client.on('error', (err) => {
             console.error('❌ Erreur MQTT :', err);
         });
+    },
+
+    // Raccourci pour allumer
+    turnOn: (plugId) => {
+        mqttService.sendCommand(plugId, 'ON');
+    },
+
+    // Raccourci pour éteindre
+    turnOff: (plugId) => {
+        mqttService.sendCommand(plugId, 'OFF');
     },
 
     // Fonction pour envoyer un ordre à une prise (ON/OFF)

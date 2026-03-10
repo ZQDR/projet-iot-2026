@@ -1,44 +1,66 @@
-// Fichier: api/controllers/paymentController.js
 const UserModel = require('../models/userModel');
+const TransactionModel = require('../models/transactionModel'); // <-- NOUVEAU
+const paypalService = require('../services/paypalService');
 
-// Fonction pour recharger le compte (Simulateur ou suite à succès PayPal)
-exports.topUp = async (req, res) => {
+// 1. CRÉER L'ORDRE (Appelé quand l'utilisateur clique sur "Payer 10€")
+exports.createPayPalOrder = async (req, res) => {
     try {
-        // req.user.id est fourni par le middleware (le token JWT)
-        const userId = req.user.id;
         const { amount } = req.body;
 
-        // Validation basique
-        if (!amount || isNaN(amount) || amount <= 0) {
-            return res.status(400).json({ error: 'Montant invalide.' });
-        }
+        if (!amount || amount <= 0) return res.status(400).json({ error: "Montant invalide" });
 
-        // 1. Récupérer l'utilisateur pour connaître son solde actuel
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({ error: 'Utilisateur introuvable.' });
-        }
+        // On prépare la demande à PayPal
+        const request = paypalService.createOrderRequest(amount);
+        const order = await paypalService.client.execute(request);
 
-        // 2. Calculer le nouveau solde
-        // parseFloat est important pour éviter de concaténer des chaines de caractères
-        const newBalance = parseFloat(user.balance) + parseFloat(amount);
+        // On renvoie l'ID de commande au téléphone pour qu'il affiche la fenêtre PayPal
+        res.json({ id: order.result.id });
 
-        // 3. Mettre à jour en base de données
-        const success = await UserModel.updateBalance(userId, newBalance);
+    } catch (err) {
+        console.error("Erreur Create Order:", err);
+        res.status(500).json({ error: "Erreur lors de la création du paiement PayPal" });
+    }
+};
 
-        if (success) {
-            res.json({
-                message: 'Rechargement effectué avec succès !',
-                previousBalance: user.balance,
-                newBalance: newBalance.toFixed(2), // On renvoie 2 chiffres après la virgule
-                addedAmount: amount
-            });
+// 2. CAPTURER LE PAIEMENT (Appelé quand l'utilisateur a fini de payer sur PayPal)
+exports.capturePayPalOrder = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { orderId } = req.body; // L'ID que PayPal a donné
+
+        // On demande à PayPal de valider la transaction
+        const request = paypalService.captureOrderRequest(orderId);
+        const capture = await paypalService.client.execute(request);
+
+        // Si PayPal dit "COMPLETED", c'est bon !
+        if (capture.result.status === 'COMPLETED') {
+            
+            // On récupère le montant réel payé (sécurité)
+            const amountPaid = capture.result.purchase_units[0].payments.captures[0].amount.value;
+            const amountFloat = parseFloat(amountPaid);
+
+            // --- LOGIQUE MÉTIER ---
+            const user = await UserModel.findById(userId);
+            const newBalance = parseFloat(user.balance) + amountFloat;
+
+            // 1. Mise à jour du solde
+            const success = await UserModel.updateBalance(userId, newBalance);
+
+            if (success) {
+                // 2. Historique
+                await TransactionModel.create(userId, 'recharge', amountFloat, `Rechargement PayPal (${orderId})`);
+
+                res.json({
+                    message: 'Paiement réussi ! Solde mis à jour.',
+                    newBalance: newBalance.toFixed(2)
+                });
+            }
         } else {
-            res.status(500).json({ error: 'Erreur lors de la mise à jour du solde.' });
+            res.status(400).json({ error: "Le paiement n'a pas été validé par PayPal." });
         }
 
-    } catch (error) {
-        console.error('Erreur topUp:', error);
-        res.status(500).json({ error: 'Erreur serveur.' });
+    } catch (err) {
+        console.error("Erreur Capture Order:", err);
+        res.status(500).json({ error: "Erreur lors de la validation du paiement." });
     }
 };

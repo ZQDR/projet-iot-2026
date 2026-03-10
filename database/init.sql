@@ -37,3 +37,15 @@ CREATE TABLE IF NOT EXISTS consumption (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (plug_id) REFERENCES plugs(id)
 );
+
+-- 4. TABLE TRANSACTIONS
+-- Pour l'historique financier (recharges et paiements)
+CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type ENUM('recharge', 'payment') NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
