@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL, -- Mot de passe hashé
     balance DECIMAL(10, 2) DEFAULT 10.00, -- Crédit initial (ex: 10€)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    role ENUM('admin', 'student') DEFAULT 'student',
     device_id VARCHAR(100) NULL
 );
 

@@ -3,9 +3,12 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware'); // On importe le vigile
+const adminMiddleware = require('../middleware/adminMiddleware'); // On importe le chef
 
-// Public : Tout le monde peut s'inscrire ou se connecter
-router.post('/register', authController.register);
+// Admin seulement : Création de compte (On protège la route)
+router.post('/register', authMiddleware, adminMiddleware, authController.register);
+
+// Public : Connexion
 router.post('/login', authController.login);
     
 // Nouvelle route pour l'auto-login

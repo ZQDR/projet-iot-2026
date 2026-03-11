@@ -10,8 +10,8 @@ exports.register = async (req, res) => {
         // On attend 'username' car c'est ton champ SQL
         const { username, email, password, balance } = req.body;
 
-        // Vérif simple
-        if (!username || !email || !password || !balance) {
+        // Vérif simple (On vérifie undefined pour accepter un solde de 0)
+        if (!username || !email || !password || balance === undefined) {
             return res.status(400).json({ error: 'Tous les champs sont obligatoires.' });
         }
 
