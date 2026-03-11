@@ -8,10 +8,10 @@ require('dotenv').config();
 exports.register = async (req, res) => {
     try {
         // On attend 'username' car c'est ton champ SQL
-        const { username, email, password } = req.body;
+        const { username, email, password, balance } = req.body;
 
         // Vérif simple
-        if (!username || !email || !password) {
+        if (!username || !email || !password || !balance) {
             return res.status(400).json({ error: 'Tous les champs sont obligatoires.' });
         }
 

@@ -4,9 +4,9 @@ const db = require('../config/db');
 class UserModel {
 
     // Créer un utilisateur (L'ID et le 'balance' de 10.00 sont gérés par MySQL)
-    static async create(username, email, passwordHash) {
-        const sql = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
-        const [result] = await db.execute(sql, [username, email, passwordHash]);
+    static async create(username, email, passwordHash, balance) {
+        const sql = 'INSERT INTO users (username, email, password,balance) VALUES (?, ?, ?, ?)';
+        const [result] = await db.execute(sql, [username, email, passwordHash, balance]);
         return result.insertId;
     }
 
