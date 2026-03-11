@@ -78,6 +78,11 @@ const mqttService = {
                             socketService.emit('power_update', { plugId, power: data.power });
                         }
 
+                        // 1.bis Gestion de la Tension (Pour la maintenance proactive)
+                        if (data.voltage !== undefined) {
+                            await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [data.voltage, plugId]);
+                        }
+
                         // 2. Gestion de l'État ON/OFF (Script 3 : { "state": "on" })
                         if (data.state !== undefined) {
                             const ison = (data.state === 'on');

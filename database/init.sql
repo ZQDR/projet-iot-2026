@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS plugs (
     id VARCHAR(50) PRIMARY KEY, -- Augmenté pour supporter les ID Shelly longs (ex: shellyplusplugs-e465b8b82e18)
     status ENUM('libre', 'occupied', 'hs') DEFAULT 'libre', -- État pour l'appli
     state BOOLEAN DEFAULT FALSE, -- État électrique (TRUE = ON, FALSE = OFF)
+    voltage FLOAT DEFAULT 0, -- Tension en Volts (pour la maintenance)
     last_ping TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Pour détecter si la prise est hors ligne
 );
 
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS consumption (
     end_time DATETIME,
     energy_kwh FLOAT DEFAULT 0, -- Consommation en kWh
     cost DECIMAL(10, 2) DEFAULT 0, -- Coût final de la session
-    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (plug_id) REFERENCES plugs(id)
 );
 
@@ -48,5 +49,16 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount DECIMAL(10, 2) NOT NULL,
     description VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 5. COMPTE ADMIN PAR DÉFAUT
+-- Login: admin@cielnewton.fr / MDP: admin123
+INSERT IGNORE INTO users (username, email, password, role, balance) 
+VALUES (
+    'Admin', 
+    'admin@cielnewton.fr', 
+    '$2b$10$uM7RrbJSqt.kSLEr.H9FUuUxBxrJJ9JS9HQH/7ldjmDCpKGSCCs9e', 
+    'admin', 
+    999.00
 );

@@ -117,6 +117,17 @@ exports.loginByDevice = async (req, res) => {
     }
 };
 
+// LISTER TOUS LES UTILISATEURS (Admin seulement)
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await UserModel.findAll();
+        res.json(users);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
+};
+
 // PROFIL (Sécurisé)
 exports.getProfile = async (req, res) => {
     // req.user.id vient du middleware
@@ -124,4 +135,19 @@ exports.getProfile = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
     
     res.json(user);
+};
+
+// SUPPRESSION DE COMPTE (RGPD - Droit à l'oubli)
+exports.deleteAccount = async (req, res) => {
+    try {
+        // req.user.id vient du token, l'utilisateur ne peut supprimer que SON compte
+        const success = await UserModel.delete(req.user.id);
+
+        if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+
+        res.json({ message: 'Compte et données personnelles supprimés avec succès.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur lors de la suppression du compte.' });
+    }
 };

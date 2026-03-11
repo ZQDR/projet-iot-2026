@@ -129,3 +129,35 @@ exports.createPlug = async (req, res) => {
         res.status(500).json({ error: "Erreur lors de la création (ID déjà existant ?)." });
     }
 };
+
+// --- POUR LA MAINTENANCE : ALERTES PROACTIVES ---
+exports.getMaintenanceAlerts = async (req, res) => {
+    try {
+        // On cherche :
+        // 1. Les prises marquées 'hs'
+        // 2. Les prises qui n'ont pas donné signe de vie (ping) depuis 5 minutes
+        // 3. Les prises avec une tension anormale (ex: < 210V ou > 250V) alors qu'elles communiquent
+        const sql = `
+            SELECT *, 
+            TIMESTAMPDIFF(MINUTE, last_ping, NOW()) as minutes_since_last_ping,
+            CASE 
+                WHEN voltage > 0 AND (voltage < 210 OR voltage > 250) THEN 'Tension Anormale'
+                WHEN last_ping < (NOW() - INTERVAL 5 MINUTE) THEN 'Perte Communication'
+                ELSE 'HS Manuel'
+            END as alert_reason
+            FROM plugs 
+            WHERE last_ping < (NOW() - INTERVAL 5 MINUTE) 
+            OR status = 'hs'
+            OR (voltage > 0 AND (voltage < 210 OR voltage > 250))
+        `;
+        const [rows] = await db.execute(sql);
+
+        res.json({
+            alert_count: rows.length,
+            devices: rows
+        });
+    } catch (err) {
+        console.error("Erreur alertes maintenance:", err);
+        res.status(500).json({ error: "Erreur lors de l'analyse du réseau." });
+    }
+};

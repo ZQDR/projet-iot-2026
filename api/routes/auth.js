@@ -8,6 +8,9 @@ const adminMiddleware = require('../middleware/adminMiddleware'); // On importe 
 // Admin seulement : Création de compte (On protège la route)
 router.post('/register', authMiddleware, adminMiddleware, authController.register);
 
+// Admin seulement : Liste des utilisateurs (Username + Solde)
+router.get('/users', authMiddleware, adminMiddleware, authController.getAllUsers);
+
 // Public : Connexion
 router.post('/login', authController.login);
     
@@ -16,5 +19,8 @@ router.post('/login-device', authController.loginByDevice);
 
 // Privé : Il faut être connecté (avoir un token) pour voir son profil
 router.get('/profile', authMiddleware, authController.getProfile);
+
+// Privé : Route pour supprimer son propre compte (RGPD)
+router.delete('/delete', authMiddleware, authController.deleteAccount);
 
 module.exports = router;
