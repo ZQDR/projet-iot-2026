@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     balance DECIMAL(10, 2) DEFAULT 10.00, -- Crédit initial (ex: 10€)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     role ENUM('admin', 'student') DEFAULT 'student',
-    device_id VARCHAR(100) NULL
+    device_id VARCHAR(100) NULL,
+    token_version INT DEFAULT 0 -- Version du token pour gérer la révocation
 );
 
 -- 2. TABLE PRISES (PLUGS)

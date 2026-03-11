@@ -19,7 +19,7 @@ class UserModel {
 
     // Trouver par ID (Pour le Profil - On ne renvoie jamais le mot de passe !)
     static async findById(id) {
-        const sql = 'SELECT id, username, email, balance, created_at, role FROM users WHERE id = ?';
+        const sql = 'SELECT id, username, email, balance, created_at, role, token_version FROM users WHERE id = ?';
         const [rows] = await db.execute(sql, [id]);
         return rows[0];
     }
@@ -35,6 +35,13 @@ class UserModel {
     const sql = 'UPDATE users SET device_id = ? WHERE id = ?';
     await db.execute(sql, [deviceId, userId]);
 }
+
+    // Incrémenter la version du token (Invalide tous les anciens tokens)
+    static async incrementTokenVersion(id) {
+        const sql = 'UPDATE users SET token_version = token_version + 1 WHERE id = ?';
+        const [result] = await db.execute(sql, [id]);
+        return result.affectedRows > 0;
+    }
 
 // Ajoute aussi cette méthode pour chercher par DeviceID
 static async findByDeviceId(deviceId) {

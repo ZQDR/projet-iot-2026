@@ -61,9 +61,13 @@ exports.login = async (req, res) => {
         }
         // ----------------------------------------------
 
+        // SÉCURITÉ : On change la version pour invalider les anciens tokens
+        await UserModel.incrementTokenVersion(user.id);
+        const updatedUser = await UserModel.findById(user.id); // On récupère la nouvelle version
+
         // Générer le Token
         const token = jwt.sign(
-            { id: user.id, email: user.email },
+            { id: user.id, email: user.email, version: updatedUser.token_version },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -98,9 +102,13 @@ exports.loginByDevice = async (req, res) => {
             return res.status(401).json({ error: "Appareil non reconnu, veuillez vous connecter manuellement." });
         }
 
+        // SÉCURITÉ : On change la version
+        await UserModel.incrementTokenVersion(user.id);
+        const updatedUser = await UserModel.findById(user.id);
+
         // Si reconnu, on génère direct un Token !
         const token = jwt.sign(
-            { id: user.id, email: user.email },
+            { id: user.id, email: user.email, version: updatedUser.token_version },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );

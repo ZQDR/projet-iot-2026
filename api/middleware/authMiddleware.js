@@ -23,6 +23,14 @@ module.exports = (req, res, next) => {
             const user = await UserModel.findById(decoded.id);
             
             if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+            
+            // 4. Vérification de la version du token (Révocation)
+            if (decoded.version !== undefined && user.token_version !== decoded.version) {
+                return res.status(401).json({ error: 'Session expirée (Nouvelle connexion détectée).' });
+            }
+
+            // DEBUG : Vérifier si le rôle est bien présent dans l'objet user
+            // console.log(`👤 [Auth] User chargé : ${user.username}, Role DB: ${user.role}`);
 
             req.user = user;
             next(); // On passe au contrôleur suivant
