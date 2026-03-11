@@ -25,7 +25,10 @@ module.exports = (req, res, next) => {
             if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
             
             // 4. Vérification de la version du token (Révocation)
-            if (decoded.version !== undefined && user.token_version !== decoded.version) {
+            // On traite le cas où le token n'a pas de version (vieux token) comme étant version 0
+            const tokenVersion = decoded.version !== undefined ? decoded.version : 0;
+
+            if (user.token_version !== tokenVersion) {
                 return res.status(401).json({ error: 'Session expirée (Nouvelle connexion détectée).' });
             }
 
