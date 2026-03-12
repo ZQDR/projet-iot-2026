@@ -2,6 +2,7 @@
 const UserModel = require('../models/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config();
 
 // INSCRIPTION
@@ -65,10 +66,13 @@ exports.login = async (req, res) => {
         await UserModel.incrementTokenVersion(user.id);
         const updatedUser = await UserModel.findById(user.id); // On récupère la nouvelle version
 
+        // Génération d'un secret dynamique aléatoire
+        const dynamicSecret = crypto.randomBytes(32).toString('hex');
+
         // Générer le Token
         const token = jwt.sign(
-            { id: user.id, email: user.email, version: updatedUser.token_version },
-            process.env.JWT_SECRET,
+            { id: user.id, email: user.email, version: updatedUser.token_version, secret: dynamicSecret },
+            dynamicSecret,
             { expiresIn: '24h' }
         );
 
@@ -106,10 +110,13 @@ exports.loginByDevice = async (req, res) => {
         await UserModel.incrementTokenVersion(user.id);
         const updatedUser = await UserModel.findById(user.id);
 
+        // Génération d'un secret dynamique aléatoire
+        const dynamicSecret = crypto.randomBytes(32).toString('hex');
+
         // Si reconnu, on génère direct un Token !
         const token = jwt.sign(
-            { id: user.id, email: user.email, version: updatedUser.token_version },
-            process.env.JWT_SECRET,
+            { id: user.id, email: user.email, version: updatedUser.token_version, secret: dynamicSecret },
+            dynamicSecret,
             { expiresIn: '24h' }
         );
 

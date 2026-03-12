@@ -50,7 +50,12 @@ exports.stopCharge = async (req, res) => {
         // NOTE: On estime une consommation moyenne (ex: 60W pour un PC portable).
         const averagePowerKW = 0.060; 
         const energyKwh = durationHours * averagePowerKW;
-        const cost = energyKwh * PRICE_PER_KWH;
+        let cost = energyKwh * PRICE_PER_KWH;
+
+        // --- OPTION : COÛT MINIMUM ---
+        // Si le coût est inférieur à 0.01€ (mais que la session a existé), on facture 0.01€
+        // Ou on peut mettre un forfait de connexion fixe
+        if (cost > 0 && cost < 0.01) cost = 0.01;
 
         // 2. Paiement
         const user = await UserModel.findById(userId);

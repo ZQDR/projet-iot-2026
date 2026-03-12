@@ -12,19 +12,26 @@ module.exports = (req, res, next) => {
         return res.status(401).json({ error: 'Accès refusé. Token manquant.' });
     }
 
-    // 2. Vérifier la signature du token
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+    // 2. Extraire le secret du payload
+    const decodedToken = jwt.decode(token);
+    
+    if (!decodedToken || !decodedToken.secret) {
+        return res.status(403).json({ error: 'Token invalide (Secret manquant).' });
+    }
+
+    // 3. Vérifier la signature du token avec le secret extrait
+    jwt.verify(token, decodedToken.secret, async (err, decoded) => {
         if (err) {
             return res.status(403).json({ error: 'Token invalide ou expiré.' });
         }
         
         try {
-            // 3. On récupère l'utilisateur complet en BDD pour avoir le champ 'balance' à jour
+            // 4. On récupère l'utilisateur complet en BDD pour avoir le champ 'balance' à jour
             const user = await UserModel.findById(decoded.id);
             
             if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
             
-            // 4. Vérification de la version du token (Révocation)
+            // 5. Vérification de la version du token (Révocation)
             // On traite le cas où le token n'a pas de version (vieux token) comme étant version 0
             const tokenVersion = decoded.version !== undefined ? decoded.version : 0;
 
