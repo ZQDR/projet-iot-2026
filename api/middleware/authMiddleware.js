@@ -12,36 +12,20 @@ module.exports = (req, res, next) => {
         return res.status(401).json({ error: 'Accès refusé. Token manquant.' });
     }
 
-    // 2. Extraire le secret du payload
-    const decodedToken = jwt.decode(token);
-    
-    if (!decodedToken || !decodedToken.secret) {
-        return res.status(403).json({ error: 'Token invalide (Secret manquant).' });
-    }
+    // 2. Vérifier la signature du token avec le secret du serveur (comme dans authController)
+    const secret = process.env.JWT_SECRET || 'secret_temporaire_secours';
 
-    // 3. Vérifier la signature du token avec le secret extrait
-    jwt.verify(token, decodedToken.secret, async (err, decoded) => {
+    jwt.verify(token, secret, async (err, decoded) => {
         if (err) {
             return res.status(403).json({ error: 'Token invalide ou expiré.' });
         }
         
         try {
-            // 4. On récupère l'utilisateur complet en BDD pour avoir le champ 'balance' à jour
+            // 3. On récupère l'utilisateur en BDD
             const user = await UserModel.findById(decoded.id);
             
             if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
             
-            // 5. Vérification de la version du token (Révocation)
-            // On traite le cas où le token n'a pas de version (vieux token) comme étant version 0
-            const tokenVersion = decoded.version !== undefined ? decoded.version : 0;
-
-            if (user.token_version !== tokenVersion) {
-                return res.status(401).json({ error: 'Session expirée (Nouvelle connexion détectée).' });
-            }
-
-            // DEBUG : Vérifier si le rôle est bien présent dans l'objet user
-            // console.log(`👤 [Auth] User chargé : ${user.username}, Role DB: ${user.role}`);
-
             req.user = user;
             next(); // On passe au contrôleur suivant
         } catch (error) {
