@@ -28,10 +28,11 @@ socketService.init(server); // Démarrage WebSocket
 mqttService.connect();      // Connexion au broker MQTT HiveMQ
 
 // Montage des Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/plugs', plugRoutes);
-app.use('/api/consumption', consumptionRoutes);
-app.use('/api/payment', paymentRoutes); // <-- Activation de la route /api/payment
+// CORRECTION CRITIQUE : On écoute sur les deux chemins (avec et sans /api) car le proxy supprime le préfixe
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/plugs', '/plugs'], plugRoutes);
+app.use(['/api/consumption', '/consumption'], consumptionRoutes);
+app.use(['/api/payment', '/payment'], paymentRoutes);
 
 // Route de test (Ping)
 app.get('/', (req, res) => {
