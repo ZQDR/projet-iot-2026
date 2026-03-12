@@ -123,6 +123,9 @@ exports.getProfile = async (req, res) => {
     const user = await UserModel.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
     
+    // Sécurité : on retire le mot de passe avant d'envoyer
+    if (user.password) delete user.password;
+
     res.json(user);
 };
 

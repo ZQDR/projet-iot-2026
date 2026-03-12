@@ -26,6 +26,9 @@ module.exports = (req, res, next) => {
             
             if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
             
+            // Sécurité : on retire le mot de passe de l'objet utilisateur
+            delete user.password;
+
             req.user = user;
             next(); // On passe au contrôleur suivant
         } catch (error) {

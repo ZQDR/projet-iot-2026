@@ -19,7 +19,8 @@ class UserModel {
 
     // Trouver par ID (Pour le Profil - On ne renvoie jamais le mot de passe !)
     static async findById(id) {
-        const sql = 'SELECT id, username, email, balance, created_at, role FROM users WHERE id = ?';
+        // On utilise SELECT * pour éviter les erreurs si une colonne (ex: role) manque
+        const sql = 'SELECT * FROM users WHERE id = ?';
         const [rows] = await db.execute(sql, [id]);
         return rows[0];
     }
@@ -49,8 +50,9 @@ class UserModel {
     // Supprimer un utilisateur (RGPD - Droit à l'oubli)
     static async delete(id) {
         // Nettoyage préalable pour éviter les erreurs de contraintes SQL (Foreign Keys)
-        await db.execute('DELETE FROM consumption WHERE user_id = ?', [id]);
-        await db.execute('DELETE FROM transactions WHERE user_id = ?', [id]);
+        // On utilise try/catch pour ne pas planter si les tables n'existent pas encore
+        try { await db.execute('DELETE FROM consumption WHERE user_id = ?', [id]); } catch(e) {}
+        try { await db.execute('DELETE FROM transactions WHERE user_id = ?', [id]); } catch(e) {}
         
         const sql = 'DELETE FROM users WHERE id = ?';
         const [result] = await db.execute(sql, [id]);

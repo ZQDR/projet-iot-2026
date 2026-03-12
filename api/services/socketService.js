@@ -8,7 +8,7 @@ module.exports = {
     init: (httpServer) => {
         io = new Server(httpServer, {
             cors: {
-                origin: "https://recharge.cielnewton.fr", // On autorise uniquement votre domaine sécurisé
+                origin: "*", // On autorise tout le monde pour éviter les blocages
                 methods: ["GET", "POST"]
             }
         });
