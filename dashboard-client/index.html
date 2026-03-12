@@ -2,7 +2,8 @@
 <html lang="fr">
 <head>
     <script src="https://www.paypal.com/sdk/js?client-id=AZPRCS7hV7d7dRu9iTIDXXPLh19rl7Wj5feE1UTejAhpjiQ1_oTYoDrPPMxDCxOLVgbVkpbYeEhYjPtZ&currency=EUR"></script>
-<script src="js/paypalManager.js"></script>
+<script src="paypalManager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Application Élève - Lycée Newton</title>
@@ -84,6 +85,26 @@
             background: #e2e3e5;
             border-radius: 5px;
             border-left: 4px solid var(--primary);
+        }
+        .card {
+            background: #f1f3f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 25px;
+            border: 1px solid #dee2e6;
+        }
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--dark);
+            text-align: left;
+        }
+        .card select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
         }
 
         /* Gestion de l'affichage */
@@ -274,14 +295,35 @@
     // --- 3b. INIT PAYPAL ---
     function initPayPal() {
         const container = document.getElementById('paypal-button-container');
-        // On vérifie si le bouton existe déjà pour ne pas le créer en double
-        if (!container || container.innerHTML.trim() !== "") return;
+        if (!container) return;
 
-        const paypalManager = new PayPalManager(API_URL, () => {
-            return localStorage.getItem('jwtToken'); // Correction : on récupère la bonne clé 'jwtToken'
-        });
+        // Éviter les doublons : si le bouton est déjà là (iframe), on ne fait rien
+        if (container.querySelector('iframe')) return;
+        
+        // Nettoyage préventif
+        container.innerHTML = "";
 
-        paypalManager.init("paypal-button-container", "amountToPay");
+        // 1. Vérifier si PayPal est chargé
+        if (!window.paypal) {
+            container.innerHTML = "<div style='color:red; padding:10px; border:1px solid red; border-radius:5px;'>❌ Erreur : Impossible de charger PayPal. Vérifiez votre connexion ou désactivez votre bloqueur de pub (AdBlock).</div>";
+            return;
+        }
+
+        // 2. Vérifier si notre script est chargé
+        if (typeof PayPalManager === 'undefined') {
+            container.innerHTML = "<div style='color:red; padding:10px; border:1px solid red; border-radius:5px;'>❌ Erreur : Le fichier <b>paypalManager.js</b> est introuvable ou mal placé. <br> Vérifiez la console (F12) pour voir s'il y a une erreur de syntaxe.</div>";
+            return;
+        }
+
+        try {
+            const paypalManager = new PayPalManager(API_URL, () => {
+                return localStorage.getItem('jwtToken');
+            });
+            paypalManager.init("paypal-button-container", "amountToPay");
+        } catch (err) {
+            console.error("Erreur Init PayPal:", err);
+            container.innerHTML = "<div style='color:red;'>Erreur interne lors de l'initialisation du paiement.</div>";
+        }
     }
 
     // --- 4. WEBSOCKET (Temps réel) ---
