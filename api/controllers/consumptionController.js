@@ -30,7 +30,8 @@ exports.getTransactions = async (req, res) => {
         const userId = req.user.id;
         const sql = 'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC';
         const [rows] = await db.execute(sql, [userId]);
-        res.json(rows);
+        // Sécurité : on renvoie un tableau vide si aucun résultat n'est trouvé
+        res.json(rows || []);
     } catch (err) {
         console.error("Erreur historique transactions:", err);
         res.status(500).json({ error: "Impossible de récupérer les transactions." });

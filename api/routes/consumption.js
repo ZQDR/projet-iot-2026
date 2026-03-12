@@ -7,4 +7,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 // GET /api/consumption/me
 router.get('/me', authMiddleware, consumptionController.getMyHistory);
 
+// Route pour récupérer l'historique financier (recharges + paiements)
+// GET /api/consumption/transactions
+router.get('/transactions', authMiddleware, consumptionController.getTransactions);
+
 module.exports = router;
