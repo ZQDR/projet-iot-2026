@@ -145,6 +145,11 @@
     const SOCKET_URL = 'https://recharge.cielnewton.fr';
     let socket = null;
 
+    // Mise à jour automatique du solde après un paiement PayPal réussi
+    document.addEventListener('balanceUpdated', (e) => {
+        document.getElementById('userBalance').innerText = Number(e.detail).toFixed(2);
+    });
+
     // --- 1. FONCTION DE CONNEXION ---
     async function login() {
         const email = document.getElementById('emailInput').value;
@@ -178,6 +183,7 @@
                 // On charge les infos et on connecte le websocket
                 loadProfile();
                 initWebSocket();
+                initPayPal(); // Initialisation du terminal de paiement
             } else {
                 errorMsg.innerText = "Email ou mot de passe incorrect.";
                 errorMsg.style.display = "block";
@@ -257,18 +263,25 @@
             // On pourrait ici changer l'UI pour montrer que ça charge
         }
     }
-const paypalManager = new PayPalManager("https://recharge.cielnewton.fr/api", () => {
-    return localStorage.getItem('token'); // Ou votre méthode de stockage du token
-});
-
-paypalManager.init("paypal-button-container", "amountToPay");
-
     async function stopCharge() {
         const data = await apiRequest('stop');
         if(data && data.cost) {
             alert(`🛑 Charge terminée.\n\n💰 Coût : ${data.cost}\n⚡ Énergie : ${data.energy_kwh} kWh\n💳 Nouveau solde : ${data.newBalance}`);
             loadProfile(); // Mise à jour de l'affichage du crédit
         }
+    }
+
+    // --- 3b. INIT PAYPAL ---
+    function initPayPal() {
+        const container = document.getElementById('paypal-button-container');
+        // On vérifie si le bouton existe déjà pour ne pas le créer en double
+        if (!container || container.innerHTML.trim() !== "") return;
+
+        const paypalManager = new PayPalManager(API_URL, () => {
+            return localStorage.getItem('jwtToken'); // Correction : on récupère la bonne clé 'jwtToken'
+        });
+
+        paypalManager.init("paypal-button-container", "amountToPay");
     }
 
     // --- 4. WEBSOCKET (Temps réel) ---
@@ -308,6 +321,7 @@ paypalManager.init("paypal-button-container", "amountToPay");
         document.getElementById('dashboardView').style.display = 'block';
         loadProfile();
         initWebSocket();
+        initPayPal();
     }
 </script>
 
