@@ -31,24 +31,12 @@ class UserModel {
         return result.affectedRows > 0;
     }
 
-    static async updateDeviceId(userId, deviceId) {
-    const sql = 'UPDATE users SET device_id = ? WHERE id = ?';
-    await db.execute(sql, [deviceId, userId]);
-}
-
     // Incrémenter la version du token (Invalide tous les anciens tokens)
     static async incrementTokenVersion(id) {
         const sql = 'UPDATE users SET token_version = token_version + 1 WHERE id = ?';
         const [result] = await db.execute(sql, [id]);
         return result.affectedRows > 0;
     }
-
-// Ajoute aussi cette méthode pour chercher par DeviceID
-static async findByDeviceId(deviceId) {
-    const sql = 'SELECT * FROM users WHERE device_id = ?';
-    const [rows] = await db.execute(sql, [deviceId]);
-    return rows[0];
-}
 
     // Récupérer tous les utilisateurs (Pour Admin)
     // On ne sélectionne que 'username' et 'balance' comme demandé

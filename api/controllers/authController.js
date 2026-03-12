@@ -40,8 +40,7 @@ exports.register = async (req, res) => {
 // CONNEXION
 exports.login = async (req, res) => {
     try {
-        // CORRECTION ICI : On récupère aussi 'deviceId'
-        const { email, password, deviceId } = req.body;
+        const { email, password } = req.body;
 
         // Chercher l'utilisateur
         const user = await UserModel.findByEmail(email);
@@ -54,13 +53,6 @@ exports.login = async (req, res) => {
         if (!valid) {
             return res.status(401).json({ error: 'Identifiants incorrects.' });
         }
-
-        // --- NOUVEAU : Enregistrement du téléphone ---
-        if (deviceId) {
-            // Si l'utilisateur a envoyé un deviceId, on le sauvegarde en BDD
-            await UserModel.updateDeviceId(user.id, deviceId);
-        }
-        // ----------------------------------------------
 
         // MULTI-SESSION : On n'incrémente plus la version pour ne pas déconnecter les autres sessions
         // await UserModel.incrementTokenVersion(user.id);
@@ -83,45 +75,6 @@ exports.login = async (req, res) => {
                 username: user.username,
                 balance: user.balance
             }
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Erreur serveur.' });
-    }
-};
-
-exports.loginByDevice = async (req, res) => {
-    try {
-        const { deviceId } = req.body;
-
-        if (!deviceId) return res.status(400).json({ error: "Device ID manquant" });
-
-        // On cherche à qui appartient ce téléphone
-        const user = await UserModel.findByDeviceId(deviceId);
-
-        if (!user) {
-            // Le téléphone n'est pas reconnu, il faut se connecter avec email/mdp
-            return res.status(401).json({ error: "Appareil non reconnu, veuillez vous connecter manuellement." });
-        }
-
-        // MULTI-SESSION : On conserve la version actuelle
-        // await UserModel.incrementTokenVersion(user.id);
-
-        // Génération d'un secret dynamique aléatoire
-        const dynamicSecret = crypto.randomBytes(32).toString('hex');
-
-        // Si reconnu, on génère direct un Token !
-        const token = jwt.sign(
-            { id: user.id, email: user.email, version: user.token_version, secret: dynamicSecret },
-            dynamicSecret,
-            { expiresIn: '24h' }
-        );
-
-        res.json({
-            message: 'Reconnexion automatique réussie',
-            token: token,
-            user: { id: user.id, username: user.username, balance: user.balance }
         });
 
     } catch (err) {
