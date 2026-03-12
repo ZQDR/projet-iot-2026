@@ -54,9 +54,6 @@ exports.login = async (req, res) => {
             return res.status(401).json({ error: 'Identifiants incorrects.' });
         }
 
-        // MULTI-SESSION : On n'incrémente plus la version pour ne pas déconnecter les autres sessions
-        // await UserModel.incrementTokenVersion(user.id);
-
         // Générer le Token
         const token = jwt.sign(
             { id: user.id, email: user.email },
