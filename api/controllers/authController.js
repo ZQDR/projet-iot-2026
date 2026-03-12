@@ -144,9 +144,26 @@ exports.getAllUsers = async (req, res) => {
 // ADMIN : Récupérer l'historique de consommation d'un utilisateur
 exports.getUserHistory = async (req, res) => {
     try {
-        const { id } = req.params;
-        const history = await UserModel.getHistory(id);
-        res.json(history);
+        const targetId = req.params.id; // L'ID dont on veut voir l'historique
+        const requesterId = req.user.id; // L'ID de celui qui demande (via Token)
+
+        // 1. Si l'utilisateur demande son propre historique, c'est OK
+        // (On utilise '==' pour gérer la différence string/number)
+        if (requesterId == targetId) {
+            const history = await UserModel.getHistory(targetId);
+            return res.json(history);
+        }
+
+        // 2. Si c'est un ID différent, on vérifie si le demandeur est ADMIN
+        const requester = await UserModel.findById(requesterId);
+        if (requester && requester.role === 'admin') {
+            const history = await UserModel.getHistory(targetId);
+            return res.json(history);
+        }
+
+        // 3. Sinon, c'est interdit
+        return res.status(403).json({ error: "Accès interdit à cet historique." });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erreur serveur.' });
