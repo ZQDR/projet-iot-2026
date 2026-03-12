@@ -1,18 +1,18 @@
 const db = require('../config/db');
 
 class TransactionModel {
-
-    /**
-     * Crée un enregistrement de transaction (recharge, dépense, etc.)
-     * @param {number} userId - ID de l'utilisateur
-     * @param {string} type - 'recharge' ou 'payment'
-     * @param {number} amount - Montant de la transaction
-     * @param {string} description - Description (ex: 'Rechargement PayPal (ID_ORDER)')
-     */
+    // Enregistre une transaction (positive pour recharge, négative pour consommation)
     static async create(userId, type, amount, description) {
         const sql = 'INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, NOW())';
         const [result] = await db.execute(sql, [userId, type, amount, description]);
         return result.insertId;
+    }
+
+    // Récupère l'historique financier d'un utilisateur
+    static async getByUserId(userId) {
+        const sql = 'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC';
+        const [rows] = await db.execute(sql, [userId]);
+        return rows;
     }
 }
 

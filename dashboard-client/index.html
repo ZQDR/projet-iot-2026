@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <script src="https://www.paypal.com/sdk/js?client-id=AZPRCS7hV7d7dRu9iTIDXXPLh19rl7Wj5feE1UTejAhpjiQ1_oTYoDrPPMxDCxOLVgbVkpbYeEhYjPtZ&currency=EUR"></script>
+<script src="js/paypalManager.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Application Élève - Lycée Newton</title>
@@ -112,6 +114,15 @@
         <div>Crédit disponible</div>
         <div class="balance-amount"><span id="userBalance">--</span> €</div>
     </div>
+<div class="card">
+    <h3>Recharger mon compte</h3>
+    <select id="amountToPay">
+        <option value="5.00">5.00 €</option>
+        <option value="10.00" selected>10.00 €</option>
+        <option value="20.00">20.00 €</option>
+    </select>
+    <div id="paypal-button-container" style="margin-top: 15px;"></div>
+</div>
 
     <div class="form-group">
         <label>ID de la prise (ex: S1-01) :</label>
@@ -246,6 +257,11 @@
             // On pourrait ici changer l'UI pour montrer que ça charge
         }
     }
+const paypalManager = new PayPalManager("https://recharge.cielnewton.fr/api", () => {
+    return localStorage.getItem('token'); // Ou votre méthode de stockage du token
+});
+
+paypalManager.init("paypal-button-container", "amountToPay");
 
     async function stopCharge() {
         const data = await apiRequest('stop');
