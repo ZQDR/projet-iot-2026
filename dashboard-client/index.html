@@ -150,8 +150,8 @@
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // On simule un deviceId pour le web
-                body: JSON.stringify({ email, password, deviceId: "web-browser-01" })
+                // On simule un deviceId pour le web. Idéalement, générer un UUID unique et le stocker.
+                body: JSON.stringify({ email, password, deviceId: getDeviceId() })
             });
 
             const data = await response.json();
@@ -175,6 +175,16 @@
             errorMsg.innerText = "Erreur de connexion au serveur.";
             errorMsg.style.display = "block";
         }
+    }
+
+    // Génère ou récupère un ID unique pour ce navigateur
+    function getDeviceId() {
+        let id = localStorage.getItem('deviceId');
+        if (!id) {
+            id = 'web-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('deviceId', id);
+        }
+        return id;
     }
 
     // --- 2. CHARGER LE PROFIL ---
@@ -214,21 +224,33 @@
                 },
                 body: JSON.stringify({ plugId })
             });
-            return await response.json();
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || "Une erreur est survenue");
+            }
+            
+            return data;
         } catch (error) {
-            alert("Erreur réseau");
+            alert("❌ " + error.message);
+            // Si erreur 401 (token expiré), on pourrait déconnecter ici
+            return null; 
         }
     }
 
     async function startCharge() {
         const data = await apiRequest('start');
-        if(data) alert(data.message || "Requête envoyée !");
+        if(data) {
+            alert("✅ " + (data.message || "Charge démarrée !"));
+            // On pourrait ici changer l'UI pour montrer que ça charge
+        }
     }
 
     async function stopCharge() {
         const data = await apiRequest('stop');
         if(data && data.cost) {
-            alert(`Charge terminée. Coût : ${data.cost}. Nouveau solde : ${data.newBalance}`);
+            alert(`🛑 Charge terminée.\n\n💰 Coût : ${data.cost}\n⚡ Énergie : ${data.energy_kwh} kWh\n💳 Nouveau solde : ${data.newBalance}`);
             loadProfile(); // Mise à jour de l'affichage du crédit
         }
     }

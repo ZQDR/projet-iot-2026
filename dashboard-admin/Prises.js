@@ -21,9 +21,16 @@ class PriseManager {
             }
         })
 
-        // Note: La suppression n'est pas implémentée dans l'API fournie (plugController), 
-        // donc on désactive ou on cache le bouton pour l'instant.
-        if(this.btnDeletePrise) this.btnDeletePrise.style.display = 'none';
+        // Gestion du bouton Supprimer
+        if (this.btnDeletePrise) {
+            this.btnDeletePrise.addEventListener("click", () => {
+                if (this.selectedPrise) {
+                    this.deletePrise(this.selectedPrise);
+                } else {
+                    alert("Veuillez sélectionner une prise dans la liste.");
+                }
+            });
+        }
 
         this.loadPrises()
     }
@@ -37,6 +44,10 @@ class PriseManager {
             this.socket = io(socketUrl);
 
             console.log("📡 Initialisation WebSocket sur", socketUrl);
+            
+            // DEBUG : Vérifier la connexion
+            this.socket.on('connect', () => console.log("✅ WebSocket connecté avec ID:", this.socket.id));
+            this.socket.on('connect_error', (err) => console.error("❌ Erreur connexion WebSocket:", err));
 
             // 1. Mise à jour de la puissance ou de l'état
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
@@ -57,16 +68,33 @@ class PriseManager {
         const row = document.getElementById(`row-${plugId}`);
         if (row) {
             const cellState = row.querySelector(".state-cell");
-            if (data.state !== undefined && cellState) {
-                // Mise à jour visuelle ON/OFF
-                const textState = data.state ? "⚡ ON" : "OFF";
-                // On garde le statut existant (libre/occupied) en parsant le texte actuel ou via un attribut data
+            
+            // 1. Mise à jour des données en mémoire (data-attributes)
+            if (data.state !== undefined) row.dataset.state = data.state;
+            if (data.power !== undefined) row.dataset.power = data.power;
+
+            // 2. Récupération de l'état actuel pour affichage
+            // Note: dataset stocke tout en string, donc "true" ou "false"
+            const currentState = row.dataset.state === "true" || row.dataset.state === true;
+            const currentPower = row.dataset.power || 0;
+            
+            if (cellState) {
+                // 3. Construction du texte d'état
+                const textState = currentState ? "⚡ ON" : "OFF";
                 const currentStatus = row.dataset.status || "Inconnu";
-                cellState.textContent = `${currentStatus} (${textState})`;
+                
+                let displayText = `${currentStatus} (${textState})`;
+
+                // Si c'est allumé et qu'on a de la puissance, on l'affiche
+                if (currentState && currentPower > 0) {
+                    displayText += ` - ${currentPower} W`;
+                }
+
+                cellState.textContent = displayText;
                 
                 // Changement de couleur dynamique
-                cellState.style.color = data.state ? "#27ae60" : "#7f8c8d";
-                cellState.style.fontWeight = data.state ? "bold" : "normal";
+                cellState.style.color = currentState ? "#27ae60" : "#7f8c8d";
+                cellState.style.fontWeight = currentState ? "bold" : "normal";
             }
         }
     }
@@ -125,6 +153,30 @@ class PriseManager {
         }
     }
 
+    async deletePrise(plugId) {
+        if (!confirm(`Voulez-vous vraiment supprimer la prise ${plugId} ?`)) return;
+
+        // On s'assure d'être connecté
+        if (!this.userManager.token) await this.userManager.loginAdmin();
+
+        try {
+            const response = await fetch(`${this.apiUrl}/plugs/${plugId}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${this.userManager.token}` }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                this.selectedPrise = null; // Reset sélection
+                this.loadPrises(); // Recharger la liste
+            } else {
+                alert("Erreur : " + (data.error || "Impossible de supprimer."));
+            }
+        } catch (error) {
+            console.error("Erreur suppression prise :", error);
+        }
+    }
+
     render() {
         this.tableBody.innerHTML = ""
 
@@ -134,6 +186,18 @@ class PriseManager {
             // Ajout d'un ID unique et de data-attributes pour le WebSocket
             tr.id = `row-${prise.id}`;
             tr.dataset.status = prise.status;
+            tr.dataset.state = prise.state; // Pour le suivi WebSocket
+            tr.dataset.power = 0; // Init à 0
+
+            // Gestion de la sélection (Click sur la ligne)
+            tr.style.cursor = "pointer";
+            tr.addEventListener("click", () => {
+                // Retirer la surbrillance des autres
+                document.querySelectorAll("#priseTableBody tr").forEach(row => row.style.backgroundColor = "");
+                // Sélectionner celle-ci
+                tr.style.backgroundColor = "#d0eaff";
+                this.selectedPrise = prise.id;
+            });
 
             // Colonne ID
             const tdNom = document.createElement("td")

@@ -1,14 +1,23 @@
 const db = require('../config/db');
 
-exports.getHistory = async (req, res) => {
+exports.getMyHistory = async (req, res) => {
     try {
         // On suppose que le middleware d'auth a ajouté req.user
         const userId = req.user.id;
         
-        const sql = 'SELECT * FROM consumption WHERE user_id = ? ORDER BY start_time DESC';
+        const sql = 'SELECT id, start_time, plug_id, cost, energy_kwh FROM consumption WHERE user_id = ? ORDER BY start_time DESC';
         const [rows] = await db.execute(sql, [userId]);
         
-        res.json(rows);
+        // Formatage pour le frontend (plug_id -> plugId)
+        const history = rows.map(row => ({
+            id: row.id,
+            start_time: row.start_time,
+            plugId: row.plug_id,
+            cost: row.cost,
+            energy_kwh: row.energy_kwh
+        }));
+
+        res.json(history);
     } catch (err) {
         console.error("Erreur historique:", err);
         res.status(500).json({ error: "Impossible de récupérer l'historique." });

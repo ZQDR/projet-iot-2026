@@ -135,6 +135,25 @@ exports.createPlug = async (req, res) => {
     }
 };
 
+// --- POUR L'ADMIN : SUPPRIMER UNE PRISE ---
+exports.deletePlug = async (req, res) => {
+    try {
+        const { plugId } = req.params;
+
+        // Suppression SQL
+        await db.execute('DELETE FROM plugs WHERE id = ?', [plugId]);
+
+        res.json({ message: "Prise supprimée avec succès." });
+    } catch (err) {
+        console.error("Erreur suppression prise:", err);
+        // Gestion de la contrainte de clé étrangère (si la prise a un historique)
+        if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({ error: "Impossible de supprimer cette prise car elle possède un historique de consommation." });
+        }
+        res.status(500).json({ error: "Erreur serveur lors de la suppression." });
+    }
+};
+
 // --- POUR LA MAINTENANCE : ALERTES PROACTIVES ---
 exports.getMaintenanceAlerts = async (req, res) => {
     try {
