@@ -41,7 +41,9 @@ class PriseManager {
         if (typeof io !== 'undefined') {
             // Connexion à la racine du serveur (là où tourne l'API)
             const socketUrl = this.apiUrl.replace('/api', ''); 
-            this.socket = io(socketUrl);
+            this.socket = io(socketUrl, {
+                path: "/api/socket.io" // On se connecte au chemin spécifique
+            });
 
             console.log("📡 Initialisation WebSocket sur", socketUrl);
             

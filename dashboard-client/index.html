@@ -330,7 +330,9 @@
     // --- 4. WEBSOCKET (Temps réel) ---
     function initWebSocket() {
         if(socket) return; // Évite de connecter deux fois
-        socket = io(SOCKET_URL);
+        socket = io(SOCKET_URL, {
+            path: "/api/socket.io" // On se connecte au chemin spécifique
+        });
         const statusBox = document.getElementById('realTimeStatus');
 
         socket.on('state_update', (data) => {
