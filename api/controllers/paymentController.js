@@ -2,7 +2,7 @@ const UserModel = require('../models/userModel');
 const TransactionModel = require('../models/transactionModel'); // <-- NOUVEAU
 const paypalService = require('../services/paypalService');
 
-// 1. CRÉER L'ORDRE (Appelé quand l'utilisateur clique sur "Payer 10€")
+// ÉTAPE 1 : Le Front demande la permission de payer (Appelé par createOrder dans paypalManager.js)
 exports.createPayPalOrder = async (req, res) => {
     try {
         const { amount } = req.body;
@@ -13,7 +13,7 @@ exports.createPayPalOrder = async (req, res) => {
         const request = paypalService.createOrderRequest(amount);
         const order = await paypalService.client.execute(request);
 
-        // On renvoie l'ID de commande au téléphone pour qu'il affiche la fenêtre PayPal
+        // On renvoie l'ID unique (ex: '5K...') au Front pour qu'il ouvre la popup PayPal
         res.json({ id: order.result.id });
 
     } catch (err) {
@@ -22,17 +22,17 @@ exports.createPayPalOrder = async (req, res) => {
     }
 };
 
-// 2. CAPTURER LE PAIEMENT (Appelé quand l'utilisateur a fini de payer sur PayPal)
+// ÉTAPE 2 : Le Front dit "C'est payé !", le Back vérifie et livre le crédit
 exports.capturePayPalOrder = async (req, res) => {
     try {
         const userId = req.user.id;
         const { orderId } = req.body; // L'ID que PayPal a donné
 
-        // On demande à PayPal de valider la transaction
+        // SÉCURITÉ : On demande directement à PayPal si l'argent est bien là
         const request = paypalService.captureOrderRequest(orderId);
         const capture = await paypalService.client.execute(request);
 
-        // Si PayPal dit "COMPLETED", c'est bon !
+        // Si PayPal répond "COMPLETED", c'est que l'argent est sur ton compte
         if (capture.result.status === 'COMPLETED') {
             
             // On récupère le montant réel payé (sécurité)
@@ -40,15 +40,20 @@ exports.capturePayPalOrder = async (req, res) => {
             const amountFloat = parseFloat(amountPaid);
 
             // --- LOGIQUE MÉTIER ---
-            const user = await UserModel.findById(userId);
-            const newBalance = parseFloat(user.balance) + amountFloat;
+            const user = await UserModel.findById(userId); // On récupère l'élève
+            const newBalance = parseFloat(user.balance) + amountFloat; // On calcule son nouveau solde
 
-            // 1. Mise à jour du solde
+            // 1. On met à jour la base de données
             const success = await UserModel.updateBalance(userId, newBalance);
 
             if (success) {
                 // 2. Historique
-                await TransactionModel.create(userId, 'recharge', amountFloat, `Rechargement PayPal (${orderId})`);
+                try {
+                    await TransactionModel.create(userId, 'recharge', amountFloat, `Rechargement PayPal (${orderId})`);
+                } catch (logErr) {
+                    // Si le log échoue, on ne bloque pas la réponse client, mais on l'affiche côté serveur
+                    console.error("⚠️ Erreur log transaction :", logErr.message);
+                }
 
                 res.json({
                     message: 'Paiement réussi ! Solde mis à jour.',

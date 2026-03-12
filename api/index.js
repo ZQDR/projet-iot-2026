@@ -3,59 +3,51 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 
-
-const db = require('./config/db');            
-const mqttService = require('./services/mqttService'); 
+// Services
 const socketService = require('./services/socketService');
+const mqttService = require('./services/mqttService');
 
+// Routes
+const authRoutes = require('./routes/auth');
+const plugRoutes = require('./routes/plugs');
+const consumptionRoutes = require('./routes/consumption');
+const paymentRoutes = require('./routes/paymentRoutes'); // <-- C'est ici qu'on ajoute le paiement
 
 const app = express();
-const server = http.createServer(app); 
-const port = process.env.PORT || 3000;
-app.use(cors());
+const server = http.createServer(app);
+
+// Middleware
+app.use(cors({
+    origin: '*', // En production, remplace par ton domaine (ex: https://dashboard.cielnewton.fr)
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+}));
 app.use(express.json());
 
+// Initialisation des Services
+socketService.init(server); // Démarrage WebSocket
+mqttService.connect();      // Connexion au broker MQTT HiveMQ
 
-// Fonction d'attente de la BDD
-const waitForDb = async () => {
-    let retries = 30; // 30 tentatives * 2s = 60 secondes max
-    while (retries > 0) {
-        try {
-            await db.execute('SELECT 1');
-            console.log('✅ Base de données connectée !');
-            return;
-        } catch (err) {
-            console.log(`⏳ Base de données indisponible (${err.message}). Nouvelle tentative dans 2s...`);
-            retries--;
-            await new Promise(res => setTimeout(res, 2000));
-        }
-    }
-    console.error('❌ Impossible de se connecter à la BDD après plusieurs tentatives.');
-    process.exit(1);
-};
+// Montage des Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/plugs', plugRoutes);
+app.use('/api/consumption', consumptionRoutes);
+app.use('/api/payment', paymentRoutes); // <-- Activation de la route /api/payment
 
-// Démarrage asynchrone
-(async () => {
-    await waitForDb();
+// Route de test (Ping)
+app.get('/', (req, res) => {
+    res.send('API Lycée Newton - En ligne 🚀');
+});
 
-    socketService.init(server);
-    mqttService.connect(); 
+// Gestion des erreurs globale
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Une erreur interne est survenue !' });
+});
 
-    app.use('/auth', require('./routes/auth'));
-    app.use('/plugs', require('./routes/plugs'));
-    app.use('/consumption', require('./routes/consumption'));
-    app.use('/payments', require('./routes/paymentRoutes'));
-
-    app.get('/', (req, res) => {
-        res.json({ 
-            message: 'API Projet Location Prise 2026 - En ligne', 
-            status: 'OK',
-            timestamp: new Date()
-        });
-    });
-
-    server.listen(port, '0.0.0.0', () => {
-        console.log(`🚀 API Master lancée sur le port ${port}`);
-        console.log(`🌍 Prêt à recevoir des requêtes (Reverse Proxy Nginx actif)`);
-    });
-})();
+// Démarrage du serveur
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`==========================================`);
+    console.log(`🚀 Serveur API démarré sur le port ${PORT}`);
+    console.log(`==========================================`);
+});
