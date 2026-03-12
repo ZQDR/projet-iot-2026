@@ -19,7 +19,7 @@ class UserModel {
 
     // Trouver par ID (Pour le Profil - On ne renvoie jamais le mot de passe !)
     static async findById(id) {
-        const sql = 'SELECT id, username, email, balance, created_at, role, token_version FROM users WHERE id = ?';
+        const sql = 'SELECT id, username, email, balance, created_at, role FROM users WHERE id = ?';
         const [rows] = await db.execute(sql, [id]);
         return rows[0];
     }

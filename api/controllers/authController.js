@@ -59,7 +59,7 @@ exports.login = async (req, res) => {
 
         // Générer le Token
         const token = jwt.sign(
-            { id: user.id, email: user.email, version: user.token_version },
+            { id: user.id, email: user.email },
             process.env.JWT_SECRET || 'secret_temporaire_secours', // Fallback si .env vide
             { expiresIn: '72h' }
         );
