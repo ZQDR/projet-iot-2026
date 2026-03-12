@@ -57,14 +57,11 @@ exports.login = async (req, res) => {
         // MULTI-SESSION : On n'incrémente plus la version pour ne pas déconnecter les autres sessions
         // await UserModel.incrementTokenVersion(user.id);
 
-        // Génération d'un secret dynamique aléatoire
-        const dynamicSecret = crypto.randomBytes(32).toString('hex');
-
         // Générer le Token
         const token = jwt.sign(
-            { id: user.id, email: user.email, version: user.token_version, secret: dynamicSecret },
-            dynamicSecret,
-            { expiresIn: '24h' }
+            { id: user.id, email: user.email, version: user.token_version },
+            process.env.JWT_SECRET || 'secret_temporaire_secours', // Fallback si .env vide
+            { expiresIn: '72h' }
         );
 
         res.json({
