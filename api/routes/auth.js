@@ -18,8 +18,16 @@ router.get('/users/:id/history', authMiddleware, authController.getUserHistory);
 // Admin seulement : Supprimer un utilisateur spécifique
 router.delete('/users/:id', authMiddleware, adminMiddleware, authController.deleteUserById);
 
-// Public : Connexion
+// Public : Connexion (C'est ici que le POST est défini)
 router.post('/login', authController.login);
+
+// Aide Debug : Si on essaie d'accéder à /login via le navigateur (GET)
+router.get('/login', (req, res) => {
+    res.status(405).json({ 
+        error: "Méthode non autorisée.", 
+        message: "Ceci est une API. Utilisez une requête POST avec email et mot de passe pour vous connecter." 
+    });
+});
     
 // Privé : Il faut être connecté (avoir un token) pour voir son profil
 router.get('/profile', authMiddleware, authController.getProfile);
