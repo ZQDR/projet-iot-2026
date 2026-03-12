@@ -1,11 +1,277 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Application Élève - Lycée Newton</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --dark: #343a40;
+            --light: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2 { text-align: center; color: var(--dark); }
+        
+        /* Formulaires & Boutons */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        input {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .btn-primary { background-color: var(--primary); }
+        .btn-start { background-color: var(--success); margin-top: 10px; }
+        .btn-stop { background-color: var(--danger); margin-top: 10px; }
+        .btn-logout { background-color: var(--dark); margin-top: 20px; font-size: 14px; }
+        
+        /* Dashboard spécifique */
+        .balance-container {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+        }
+        .balance-amount {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 0.9em;
+            background: #e2e3e5;
+            border-radius: 5px;
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Gestion de l'affichage */
+        #dashboardView { display: none; }
+    </style>
 </head>
 <body>
-    
+
+<div class="container" id="loginView">
+    <h2>🔐 Connexion Élève</h2>
+    <div class="form-group">
+        <label>Email :</label>
+        <input type="email" id="emailInput" placeholder="jean.dupont@eleve.fr">
+    </div>
+    <div class="form-group">
+        <label>Mot de passe :</label>
+        <input type="password" id="passwordInput" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" onclick="login()">Se connecter</button>
+    <p id="loginError" style="color: red; text-align: center; display: none;"></p>
+</div>
+
+<div class="container" id="dashboardView">
+    <h2>⚡ Lycée Newton</h2>
+    <p style="text-align: center;">Bienvenue, <strong id="userName">...</strong></p>
+
+    <div class="balance-container">
+        <div>Crédit disponible</div>
+        <div class="balance-amount"><span id="userBalance">--</span> €</div>
+    </div>
+
+    <div class="form-group">
+        <label>ID de la prise (ex: S1-01) :</label>
+        <input type="text" id="plugId" placeholder="Entrer l'ID de la prise">
+        
+        <button class="btn-start" onclick="startCharge()">Démarrer la charge</button>
+        <button class="btn-stop" onclick="stopCharge()">Arrêter & Payer</button>
+    </div>
+
+    <div class="status-box" id="realTimeStatus">
+        📡 Statut de la prise : En attente...<br>
+        ⚡ Puissance : 0 W
+    </div>
+
+    <button class="btn-logout" onclick="logout()">Déconnexion</button>
+</div>
+
+<script>
+    const API_URL = 'https://recharge.cielnewton.fr/api';
+    const SOCKET_URL = 'https://recharge.cielnewton.fr';
+    let socket = null;
+
+    // --- 1. FONCTION DE CONNEXION ---
+    async function login() {
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+        const errorMsg = document.getElementById('loginError');
+
+        if (!email || !password) {
+            errorMsg.innerText = "Remplis tous les champs gros !";
+            errorMsg.style.display = "block";
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // On simule un deviceId pour le web
+                body: JSON.stringify({ email, password, deviceId: "web-browser-01" })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.token) {
+                // Succès : On sauvegarde le token en local !
+                localStorage.setItem('jwtToken', data.token);
+                
+                // On bascule l'affichage
+                document.getElementById('loginView').style.display = 'none';
+                document.getElementById('dashboardView').style.display = 'block';
+                
+                // On charge les infos et on connecte le websocket
+                loadProfile();
+                initWebSocket();
+            } else {
+                errorMsg.innerText = "Email ou mot de passe incorrect.";
+                errorMsg.style.display = "block";
+            }
+        } catch (error) {
+            errorMsg.innerText = "Erreur de connexion au serveur.";
+            errorMsg.style.display = "block";
+        }
+    }
+
+    // --- 2. CHARGER LE PROFIL ---
+    async function loadProfile() {
+        const token = localStorage.getItem('jwtToken');
+        
+        try {
+            const response = await fetch(`${API_URL}/auth/profile`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                document.getElementById('userName').innerText = data.username;
+                document.getElementById('userBalance').innerText = Number(data.balance).toFixed(2);
+            } else {
+                logout(); // Si le token est expiré, on déco
+            }
+        } catch (error) {
+            console.error("Erreur de récupération du profil:", error);
+        }
+    }
+
+    // --- 3. DÉMARRER / ARRÊTER LA CHARGE ---
+    async function apiRequest(endpoint, method = 'POST') {
+        const plugId = document.getElementById('plugId').value;
+        if (!plugId) return alert('Veuillez entrer un ID de prise');
+
+        const token = localStorage.getItem('jwtToken');
+        
+        try {
+            const response = await fetch(`${API_URL}/plugs/${endpoint}`, {
+                method: method,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ plugId })
+            });
+            return await response.json();
+        } catch (error) {
+            alert("Erreur réseau");
+        }
+    }
+
+    async function startCharge() {
+        const data = await apiRequest('start');
+        if(data) alert(data.message || "Requête envoyée !");
+    }
+
+    async function stopCharge() {
+        const data = await apiRequest('stop');
+        if(data && data.cost) {
+            alert(`Charge terminée. Coût : ${data.cost}. Nouveau solde : ${data.newBalance}`);
+            loadProfile(); // Mise à jour de l'affichage du crédit
+        }
+    }
+
+    // --- 4. WEBSOCKET (Temps réel) ---
+    function initWebSocket() {
+        if(socket) return; // Évite de connecter deux fois
+        socket = io(SOCKET_URL);
+        const statusBox = document.getElementById('realTimeStatus');
+
+        socket.on('state_update', (data) => {
+            const currentPlug = document.getElementById('plugId').value;
+            if (data.plugId === currentPlug) {
+                const etat = data.state ? "🟢 Allumée" : "🔴 Éteinte";
+                statusBox.innerHTML = `📡 Statut de la prise : ${etat}<br>` + statusBox.innerHTML.split('<br>')[1];
+            }
+        });
+
+        socket.on('power_update', (data) => {
+            const currentPlug = document.getElementById('plugId').value;
+            if (data.plugId === currentPlug) {
+                const etat = statusBox.innerHTML.split('<br>')[0];
+                statusBox.innerHTML = `${etat}<br>⚡ Puissance : ${data.power} W`;
+            }
+        });
+    }
+
+    // --- 5. DÉCONNEXION ---
+    function logout() {
+        localStorage.removeItem('jwtToken');
+        if(socket) socket.disconnect();
+        window.location.reload(); // Recharge la page pour revenir au login
+    }
+
+    // --- 6. VÉRIFICATION AUTO AU DÉMARRAGE ---
+    // Si l'utilisateur a déjà un token valide en rouvrant la page, on zappe le login
+    if (localStorage.getItem('jwtToken')) {
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('dashboardView').style.display = 'block';
+        loadProfile();
+        initWebSocket();
+    }
+</script>
+
 </body>
 </html>
