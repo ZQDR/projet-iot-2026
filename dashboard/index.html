@@ -21,7 +21,14 @@
                 </div>
                 <div class="scroll-content">
                     <table class="maintenance-table">
-                        </table>
+                        <thead>
+                            <tr>
+                                <th>Appareil</th>
+                                <th>Alerte</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintenanceList"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -71,7 +78,7 @@
                             <tr>
                                 <th>Équipement</th>
                                 <th>Statut</th>
-                                <th>Localisation</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="priseTableBody">
@@ -89,7 +96,7 @@
 
     <script src="UserManager.js"></script>
     <script src="Graph.js"></script>
-    <script src="Notification.js"></script>
+    <!-- <script src="Notification.js"></script> -->
     <script src="Prises.js"></script>
 
 </body>

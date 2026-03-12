@@ -53,13 +53,17 @@ static async findByDeviceId(deviceId) {
     // Récupérer tous les utilisateurs (Pour Admin)
     // On ne sélectionne que 'username' et 'balance' comme demandé
     static async findAll() {
-        const sql = 'SELECT username, balance FROM users';
+        const sql = 'SELECT id, username, balance FROM users';
         const [rows] = await db.execute(sql);
         return rows;
     }
 
     // Supprimer un utilisateur (RGPD - Droit à l'oubli)
     static async delete(id) {
+        // Nettoyage préalable pour éviter les erreurs de contraintes SQL (Foreign Keys)
+        await db.execute('DELETE FROM consumption WHERE user_id = ?', [id]);
+        await db.execute('DELETE FROM transactions WHERE user_id = ?', [id]);
+        
         const sql = 'DELETE FROM users WHERE id = ?';
         const [result] = await db.execute(sql, [id]);
         return result.affectedRows > 0;

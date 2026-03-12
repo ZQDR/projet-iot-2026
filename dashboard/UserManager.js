@@ -2,6 +2,14 @@ class UserManager {
     constructor(apiUrl) {
         this.apiUrl = apiUrl;
         this.token = null; // Stockera le Master Token Admin
+        this.selectedUserId = null; // ID de l'utilisateur sélectionné
+        
+        // SÉCURITÉ DOM : On attend que la page soit chargée pour attacher les événements
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => this.initDeleteButton());
+        } else {
+            this.initDeleteButton();
+        }
     }
 
     // Connexion automatique pour récupérer le token Admin
@@ -60,7 +68,7 @@ class UserManager {
                 if(userList) {
                     userList.innerHTML = ""; // On vide la liste actuelle
                     users.forEach(user => {
-                        this.addUserToDashboard(user.username, "", user.balance);
+                        this.addUserToDashboard(user.id, user.username, user.balance);
                     });
                 }
             }
@@ -69,12 +77,56 @@ class UserManager {
         }
     }
 
+    initDeleteButton() {
+        this.btnDeleteUser = document.getElementById("btnDeleteUser");
+        if (this.btnDeleteUser) {
+            this.btnDeleteUser.addEventListener("click", async () => {
+                if (!this.selectedUserId) {
+                    Swal.fire('Attention', 'Veuillez sélectionner un utilisateur à supprimer.', 'warning');
+                    return;
+                }
+
+                const confirm = await Swal.fire({
+                    title: 'Êtes-vous sûr ?',
+                    text: "Cette action est irréversible !",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Oui, supprimer'
+                });
+
+                if (confirm.isConfirmed) {
+                    await this.deleteUser(this.selectedUserId);
+                }
+            });
+        }
+    }
+
+    async deleteUser(userId) {
+        try {
+            const response = await fetch(`${this.apiUrl}/auth/users/${userId}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${this.token}` }
+            });
+
+            if (response.ok) {
+                Swal.fire('Supprimé !', 'L\'utilisateur a été supprimé.', 'success');
+                this.selectedUserId = null;
+                this.fetchAllUsers(); // Rafraîchir la liste
+            } else {
+                Swal.fire('Erreur', 'Impossible de supprimer l\'utilisateur.', 'error');
+            }
+        } catch (error) {
+            console.error("Erreur suppression:", error);
+        }
+    }
+
     async registerUser(firstName, lastName, email, password, creditAmount) {
         // 1. Si on n'a pas de token, on se connecte d'abord
         if (!this.token) await this.loginAdmin();
 
         const username = `${firstName}${lastName}`;
-        const payload = { username, email, password, creditAmount };
+        const payload = { username, email, password, balance: creditAmount };
 
         try {
             const response = await fetch(`${this.apiUrl}/auth/register`, {
@@ -98,12 +150,22 @@ class UserManager {
         }
     }
 
-    addUserToDashboard(firstName, lastName, creditAmount) {
+    addUserToDashboard(id, username, creditAmount) {
         const userList = document.getElementById("userList");
         if (!userList) return;
 
         const li = document.createElement("li");
-        li.innerHTML = `<b>${firstName} ${lastName}</b> - Crédit: ${creditAmount}€`;
+        li.dataset.id = id;
+        li.dataset.username = username; // Pour le Graph
+        li.innerHTML = `<b>${username}</b> - Crédit: ${creditAmount}€`;
+        
+        li.addEventListener("click", () => {
+            // Gestion de la sélection visuelle
+            document.querySelectorAll("#userList li").forEach(el => el.style.backgroundColor = "");
+            li.style.backgroundColor = "#d0eaff";
+            this.selectedUserId = id;
+        });
+
         userList.appendChild(li);
     }
 
@@ -153,7 +215,9 @@ class UserManager {
 
                 if (result.success) {
                     Swal.fire('Succès !', 'Utilisateur créé.', 'success');
-                    this.addUserToDashboard(firstName, lastName, creditAmount);
+                    // On utilise l'ID retourné par l'API (result.data.userId)
+                    const username = `${firstName}${lastName}`;
+                    this.addUserToDashboard(result.data.userId, username, creditAmount);
                 } else {
                     Swal.fire('Erreur', result.message, 'error');
                 }

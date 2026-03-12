@@ -28,12 +28,27 @@ class PriseManager {
     }
 
     async loadPrises() {
+        // S'assurer qu'on est connecté avant de charger les prises (Route protégée)
+        if (!this.userManager.token) {
+            const logged = await this.userManager.loginAdmin();
+            if (!logged) return; // Si l'utilisateur annule, on arrête
+        }
+
         try {
             // ROUTE API : RECUPERER LES PRISES
-            const response = await fetch(`${this.apiUrl}/plugs`)
+            const response = await fetch(`${this.apiUrl}/plugs`, {
+                headers: {
+                    "Authorization": `Bearer ${this.userManager.token}`
+                }
+            })
             const data = await response.json()
-            this.prises = data
-            this.render()
+            
+            if (Array.isArray(data)) {
+                this.prises = data
+                this.render()
+            } else {
+                console.error("Format de données invalide reçu pour les prises:", data);
+            }
         } catch (error) {
             console.error("Erreur chargement prises :", error)
         }
@@ -90,8 +105,22 @@ class PriseManager {
             btnQr.className = "btn-qr"; // Pour le CSS si besoin
             btnQr.onclick = (e) => {
                 e.stopPropagation();
-                // Ouvre l'image QR Code générée par l'API dans un nouvel onglet pour impression
-                window.open(`${this.apiUrl}/plugs/${prise.id}/qrcode`, '_blank');
+                // Ouvre une fenêtre d'impression propre avec le QR Code
+                const url = `${this.apiUrl}/plugs/${prise.id}/qrcode`;
+                const printWindow = window.open('', '_blank', 'width=500,height=600');
+                if (printWindow) {
+                    printWindow.document.write(`
+                        <html>
+                            <head><title>QR Code - ${prise.id}</title></head>
+                            <body style="text-align:center; font-family:sans-serif; margin-top:50px;">
+                                <h1>Prise : ${prise.id}</h1>
+                                <img src="${url}" style="width:300px; height:300px; border:2px solid #333;" onload="window.print();">
+                                <p>Scannez ce code pour démarrer la recharge.</p>
+                            </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                }
             };
             tdAction.appendChild(btnQr);
 

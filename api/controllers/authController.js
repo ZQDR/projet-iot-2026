@@ -166,3 +166,16 @@ exports.deleteAccount = async (req, res) => {
         res.status(500).json({ error: 'Erreur lors de la suppression du compte.' });
     }
 };
+
+// ADMIN : Supprimer un utilisateur spécifique par son ID
+exports.deleteUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const success = await UserModel.delete(id);
+        if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+        res.json({ message: 'Utilisateur supprimé avec succès.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
+};

@@ -11,6 +11,9 @@ router.post('/register', authMiddleware, adminMiddleware, authController.registe
 // Admin seulement : Liste des utilisateurs (Username + Solde)
 router.get('/users', authMiddleware, adminMiddleware, authController.getAllUsers);
 
+// Admin seulement : Supprimer un utilisateur spécifique
+router.delete('/users/:id', authMiddleware, adminMiddleware, authController.deleteUserById);
+
 // Public : Connexion
 router.post('/login', authController.login);
     
