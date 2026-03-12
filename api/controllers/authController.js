@@ -62,16 +62,15 @@ exports.login = async (req, res) => {
         }
         // ----------------------------------------------
 
-        // SÉCURITÉ : On change la version pour invalider les anciens tokens
-        await UserModel.incrementTokenVersion(user.id);
-        const updatedUser = await UserModel.findById(user.id); // On récupère la nouvelle version
+        // MULTI-SESSION : On n'incrémente plus la version pour ne pas déconnecter les autres sessions
+        // await UserModel.incrementTokenVersion(user.id);
 
         // Génération d'un secret dynamique aléatoire
         const dynamicSecret = crypto.randomBytes(32).toString('hex');
 
         // Générer le Token
         const token = jwt.sign(
-            { id: user.id, email: user.email, version: updatedUser.token_version, secret: dynamicSecret },
+            { id: user.id, email: user.email, version: user.token_version, secret: dynamicSecret },
             dynamicSecret,
             { expiresIn: '24h' }
         );
@@ -106,16 +105,15 @@ exports.loginByDevice = async (req, res) => {
             return res.status(401).json({ error: "Appareil non reconnu, veuillez vous connecter manuellement." });
         }
 
-        // SÉCURITÉ : On change la version
-        await UserModel.incrementTokenVersion(user.id);
-        const updatedUser = await UserModel.findById(user.id);
+        // MULTI-SESSION : On conserve la version actuelle
+        // await UserModel.incrementTokenVersion(user.id);
 
         // Génération d'un secret dynamique aléatoire
         const dynamicSecret = crypto.randomBytes(32).toString('hex');
 
         // Si reconnu, on génère direct un Token !
         const token = jwt.sign(
-            { id: user.id, email: user.email, version: updatedUser.token_version, secret: dynamicSecret },
+            { id: user.id, email: user.email, version: user.token_version, secret: dynamicSecret },
             dynamicSecret,
             { expiresIn: '24h' }
         );
