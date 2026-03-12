@@ -109,7 +109,8 @@ class ConsumptionGraph{
             },
             options:{
                 responsive:true,
-                maintainAspectRatio: false, // Permet au graph de s'adapter à la div parent
+                maintainAspectRatio: true, // On garde les proportions pour éviter qu'il ne s'étire trop
+                aspectRatio: 2, // Format rectangulaire standard (2x plus large que haut)
                 scales:{y:{beginAtZero:true}}
             }
         });

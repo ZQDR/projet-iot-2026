@@ -48,13 +48,30 @@ services:
     command: npm run dev
 
   # --- Service 3 : Le Dashboard ---
-  dashboard:
-    build: ./dashboard
+# 1. LE DASHBOARD ADMINISTRATEUR (Port 8085)
+  dashboard-admin:
+    build: ./dashboard-admin
+    container_name: projet-2026-dashboard-admin
     restart: always
     ports:
       - "8085:80"
     volumes:
-      - ./dashboard:/usr/share/nginx/html
+      - ./dashboard-admin:/usr/share/nginx/html
+    depends_on:
+      - api
+
+
+  # 2. LE DASHBOARD CLIENT/ÉLÈVE (Port 8080)
+  dashboard-client:
+    build: ./dashboard-client
+    container_name: projet-2026-dashboard-client
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dashboard-client:/usr/share/nginx/html  # <-- L'ajout du volume est ici !
+    depends_on:
+      - api
 
 volumes:
   db_data:
