@@ -17,7 +17,7 @@ exports.createPayPalOrder = async (req, res) => {
         res.json({ id: order.result.id });
 
     } catch (err) {
-        console.error("Erreur Create Order:", err);
+        console.error("Erreur Create Order:", err.message || err);
         res.status(500).json({ error: "Erreur lors de la création du paiement PayPal" });
     }
 };
@@ -54,13 +54,15 @@ exports.capturePayPalOrder = async (req, res) => {
                     message: 'Paiement réussi ! Solde mis à jour.',
                     newBalance: newBalance.toFixed(2)
                 });
+            } else {
+                res.status(500).json({ error: "Erreur lors de la mise à jour du solde utilisateur." });
             }
         } else {
             res.status(400).json({ error: "Le paiement n'a pas été validé par PayPal." });
         }
 
     } catch (err) {
-        console.error("Erreur Capture Order:", err);
+        console.error("Erreur Capture Order:", err.message || err);
         res.status(500).json({ error: "Erreur lors de la validation du paiement." });
     }
 };

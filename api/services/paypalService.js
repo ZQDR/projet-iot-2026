@@ -19,7 +19,7 @@ module.exports = {
             purchase_units: [{
                 amount: {
                     currency_code: 'EUR',
-                    value: amount.toString()
+                    value: parseFloat(amount).toFixed(2)
                 }
             }]
         });
@@ -28,6 +28,8 @@ module.exports = {
 
     // Helper pour capturer (valider) la commande
     captureOrderRequest: (orderId) => {
-        return new paypal.orders.OrdersCaptureRequest(orderId);
+        const request = new paypal.orders.OrdersCaptureRequest(orderId);
+        request.requestBody({});
+        return request;
     }
 };
