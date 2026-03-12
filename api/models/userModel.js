@@ -58,6 +58,13 @@ static async findByDeviceId(deviceId) {
         return rows;
     }
 
+    // Récupérer l'historique de consommation d'un utilisateur
+    static async getHistory(userId) {
+        const sql = 'SELECT start_time, energy_kwh, cost, plug_id FROM consumption WHERE user_id = ? ORDER BY start_time DESC';
+        const [rows] = await db.execute(sql, [userId]);
+        return rows || []; // Retourne un tableau vide si null
+    }
+
     // Supprimer un utilisateur (RGPD - Droit à l'oubli)
     static async delete(id) {
         // Nettoyage préalable pour éviter les erreurs de contraintes SQL (Foreign Keys)

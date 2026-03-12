@@ -9,6 +9,7 @@ class PriseManager {
         this.btnDeletePrise = document.getElementById("btnDeletePrise")
         this.selectedPrise = null
         this.init()
+        this.initSocket() // Démarrage des WebSockets
     }
 
     init() {
@@ -25,6 +26,49 @@ class PriseManager {
         if(this.btnDeletePrise) this.btnDeletePrise.style.display = 'none';
 
         this.loadPrises()
+    }
+
+    // --- GESTION WEBSOCKETS (Temps réel) ---
+    initSocket() {
+        // On suppose que socket.io est chargé globalement via le script HTML
+        if (typeof io !== 'undefined') {
+            // Connexion à la racine du serveur (là où tourne l'API)
+            const socketUrl = this.apiUrl.replace('/api', ''); 
+            this.socket = io(socketUrl);
+
+            console.log("📡 Initialisation WebSocket sur", socketUrl);
+
+            // 1. Mise à jour de la puissance ou de l'état
+            this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
+            this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
+            
+            // 2. Nouvelle prise détectée
+            this.socket.on('new_plug_added', () => {
+                console.log("Nouvelle prise détectée, rechargement...");
+                this.loadPrises();
+            });
+        } else {
+            console.warn("Socket.io non chargé. Le temps réel est désactivé.");
+        }
+    }
+
+    // Met à jour une ligne spécifique sans tout recharger
+    updateRowUI(plugId, data) {
+        const row = document.getElementById(`row-${plugId}`);
+        if (row) {
+            const cellState = row.querySelector(".state-cell");
+            if (data.state !== undefined && cellState) {
+                // Mise à jour visuelle ON/OFF
+                const textState = data.state ? "⚡ ON" : "OFF";
+                // On garde le statut existant (libre/occupied) en parsant le texte actuel ou via un attribut data
+                const currentStatus = row.dataset.status || "Inconnu";
+                cellState.textContent = `${currentStatus} (${textState})`;
+                
+                // Changement de couleur dynamique
+                cellState.style.color = data.state ? "#27ae60" : "#7f8c8d";
+                cellState.style.fontWeight = data.state ? "bold" : "normal";
+            }
+        }
     }
 
     async loadPrises() {
@@ -87,6 +131,9 @@ class PriseManager {
         this.prises.forEach(prise => {
 
             const tr = document.createElement("tr")
+            // Ajout d'un ID unique et de data-attributes pour le WebSocket
+            tr.id = `row-${prise.id}`;
+            tr.dataset.status = prise.status;
 
             // Colonne ID
             const tdNom = document.createElement("td")
@@ -94,9 +141,15 @@ class PriseManager {
 
             // Colonne État
             const tdEtat = document.createElement("td")
+            tdEtat.className = "state-cell"; // Classe pour ciblage facile
             // On affiche le status (libre/occupied) et l'état électrique (ON/OFF)
             const elecState = prise.state ? "⚡ ON" : "OFF";
             tdEtat.textContent = `${prise.status} (${elecState})`;
+            
+            if(prise.state) {
+                tdEtat.style.color = "#27ae60";
+                tdEtat.style.fontWeight = "bold";
+            }
             
             // Colonne Actions (QR Code)
             const tdAction = document.createElement("td")

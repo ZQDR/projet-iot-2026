@@ -143,6 +143,18 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
+// ADMIN : Récupérer l'historique de consommation d'un utilisateur
+exports.getUserHistory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const history = await UserModel.getHistory(id);
+        res.json(history);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
+};
+
 // PROFIL (Sécurisé)
 exports.getProfile = async (req, res) => {
     // req.user.id vient du middleware

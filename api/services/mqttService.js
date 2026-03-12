@@ -88,6 +88,9 @@ const mqttService = {
                             const ison = (data.state === 'on');
                             await db.execute('UPDATE plugs SET state = ? WHERE id = ?', [ison, plugId]);
 
+                            // WEBSOCKET : On prévient le dashboard immédiatement
+                            socketService.emit('state_update', { plugId, state: ison });
+
                             // SÉCURITÉ : Si la prise s'allume alors qu'elle est libre, on l'éteint immédiatement
                             if (ison) {
                                 const [statusRows] = await db.execute('SELECT status FROM plugs WHERE id = ?', [plugId]);

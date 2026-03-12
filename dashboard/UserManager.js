@@ -6,9 +6,13 @@ class UserManager {
         
         // SÉCURITÉ DOM : On attend que la page soit chargée pour attacher les événements
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => this.initDeleteButton());
+            document.addEventListener("DOMContentLoaded", () => {
+                this.initDeleteButton();
+                this.initSearch();
+            });
         } else {
             this.initDeleteButton();
+            this.initSearch();
         }
     }
 
@@ -68,12 +72,32 @@ class UserManager {
                 if(userList) {
                     userList.innerHTML = ""; // On vide la liste actuelle
                     users.forEach(user => {
+                        if (user.username === 'Admin') return; // Masquer l'utilisateur Admin
                         this.addUserToDashboard(user.id, user.username, user.balance);
                     });
                 }
             }
         } catch (error) {
             console.error("Erreur chargement utilisateurs:", error);
+        }
+    }
+
+    initSearch() {
+        const searchInput = document.querySelector(".search-bar input");
+        if (searchInput) {
+            searchInput.addEventListener("input", (e) => {
+                const term = e.target.value.toLowerCase();
+                const items = document.querySelectorAll("#userList li");
+                
+                items.forEach(li => {
+                    const username = li.dataset.username.toLowerCase();
+                    if (username.includes(term)) {
+                        li.style.display = "";
+                    } else {
+                        li.style.display = "none";
+                    }
+                });
+            });
         }
     }
 
@@ -171,6 +195,9 @@ class UserManager {
 
     attachToForm(btnId) {
         const btn = document.getElementById(btnId);
+        
+        // Sécurité : Si le bouton n'existe pas sur cette page, on ne fait rien (évite de planter le script)
+        if (!btn) return;
 
         btn.addEventListener("click", async () => {
             // Affiche une fenêtre "Prompt" version formulaire complet
@@ -227,4 +254,7 @@ class UserManager {
 }
 
 const userManager = new UserManager("https://recharge.cielnewton.fr/api");
-userManager.attachToForm("btnAddUser");
+
+document.addEventListener("DOMContentLoaded", () => {
+    userManager.attachToForm("btnAddUser");
+});

@@ -11,6 +11,10 @@ router.post('/register', authMiddleware, adminMiddleware, authController.registe
 // Admin seulement : Liste des utilisateurs (Username + Solde)
 router.get('/users', authMiddleware, adminMiddleware, authController.getAllUsers);
 
+// Admin seulement : Historique de consommation d'un utilisateur
+// IMPORTANT : Si cette ligne est absente, vous aurez une Erreur 404
+router.get('/users/:id/history', authMiddleware, adminMiddleware, authController.getUserHistory);
+
 // Admin seulement : Supprimer un utilisateur spécifique
 router.delete('/users/:id', authMiddleware, adminMiddleware, authController.deleteUserById);
 

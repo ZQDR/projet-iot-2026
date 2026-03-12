@@ -3,32 +3,59 @@ class ConsumptionGraph{
         this.apiUrl=apiUrl;
         this.userManager = userManager;
         this.chart=null;
-        this.ctx=document.getElementById("consoChart").getContext("2d");
-        this.listenUserSelection();
+        
+        // SÉCURITÉ DOM : Attendre que le HTML soit chargé pour trouver <canvas> et <ul>
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => this.init());
+        } else {
+            this.init();
+        }
     }
 
-    listenUserSelection(){
-        const userList=document.getElementById("userList");
+    init() {
+        const canvas = document.getElementById("consoChart");
+        const userList = document.getElementById("userList");
 
-        userList.addEventListener("click",(event)=>{
-            const li = event.target.closest("li");
-            if(li && li.dataset.id){
-                const userId = li.dataset.id;
-                this.loadUserConsumption(userId);
-            }
-        });
+        if (canvas && userList) {
+            this.ctx = canvas.getContext("2d");
+            
+            // Délégation d'événement sur la liste des utilisateurs
+            userList.addEventListener("click", (event) => {
+                const li = event.target.closest("li");
+                if (li && li.dataset.id) {
+                    const userId = li.dataset.id;
+                    this.loadUserConsumption(userId);
+                }
+            });
+        } else {
+            console.warn("Graph.js : Éléments 'consoChart' ou 'userList' introuvables.");
+        }
     }
 
     async loadUserConsumption(userId){
         try{
             // On vérifie le token avant d'appeler
-            if (!this.userManager.token) await this.userManager.loginAdmin();
+            if (!this.userManager.token) {
+                const logged = await this.userManager.loginAdmin();
+                if (!logged) return; // Si l'utilisateur annule
+            }
 
             // Appel de la route API correcte avec l'ID
-            const response=await fetch(`${this.apiUrl}/consumption/history/${userId}`, {
+            const response=await fetch(`${this.apiUrl}/auth/users/${userId}/history`, {
                 headers: { "Authorization": `Bearer ${this.userManager.token}` }
             }); 
             
+            if (!response.ok) {
+                console.error("Erreur API Graphique :", response.status);
+                if (response.status === 401 || response.status === 403) {
+                    alert("Session expirée. Veuillez recharger la page.");
+                } else {
+                    // On affiche le code d'erreur pour aider au débogage
+                    alert(`Impossible de récupérer l'historique. (Erreur ${response.status})`);
+                }
+                return;
+            }
+
             const data=await response.json();
 
             // Transformation des données (Array d'objets SQL -> Arrays pour Chart.js)
@@ -37,17 +64,16 @@ class ConsumptionGraph{
             const values = [];
 
             if (Array.isArray(data)) {
-                // On inverse l'ordre pour avoir le plus ancien à gauche si l'API renvoie le plus récent en premier
-                data.reverse().forEach(session => {
+                // L'API SQL renvoie souvent le plus récent en premier, on inverse pour le graphique (gauche -> droite)
+                [...data].reverse().forEach(session => {
                     // Formatage simple de la date (ex: "12/05 14:30")
                     const dateObj = new Date(session.start_time);
-                    const formattedDate = dateObj.toLocaleDateString('fr-FR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    // Utilisation de toLocaleString pour inclure l'heure correctement
+                    const formattedDate = dateObj.toLocaleString('fr-FR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     
                     dates.push(formattedDate);
                     
-                    // Conversion kWh -> Wh pour plus de lisibilité, ou garder kWh
-                    // Ici on garde l'unité stockée ou on convertit si besoin. Le label dit "Wh".
-                    // Si energy_kwh = 0.1 => 100 Wh
+                    // Conversion kWh -> Wh pour plus de lisibilité
                     const energyWh = (session.energy_kwh || 0) * 1000; 
                     values.push(energyWh);
                 });
@@ -61,6 +87,11 @@ class ConsumptionGraph{
     }
 
     updateGraph(labels,values){
+        if (typeof Chart === 'undefined') {
+            console.error("La librairie Chart.js n'est pas chargée !");
+            return;
+        }
+
         if(this.chart)this.chart.destroy();
 
         this.chart=new Chart(this.ctx,{
@@ -78,6 +109,7 @@ class ConsumptionGraph{
             },
             options:{
                 responsive:true,
+                maintainAspectRatio: false, // Permet au graph de s'adapter à la div parent
                 scales:{y:{beginAtZero:true}}
             }
         });
