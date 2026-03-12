@@ -17,7 +17,9 @@ exports.createPayPalOrder = async (req, res) => {
         res.json({ id: order.result.id });
 
     } catch (err) {
-        console.error("Erreur Create Order:", err.message || err);
+        console.error("❌ ERREUR PAYPAL (Create Order) :");
+        console.error("- Message :", err.message);
+        if (err.statusCode) console.error("- Code HTTP :", err.statusCode);
         res.status(500).json({ error: "Erreur lors de la création du paiement PayPal" });
     }
 };
