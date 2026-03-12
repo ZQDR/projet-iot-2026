@@ -7,7 +7,6 @@ module.exports = {
     // 1. Initialisation (Appelée une seule fois par index.js au démarrage)
     init: (httpServer) => {
         io = new Server(httpServer, {
-            path: "/api/socket.io", // On force le chemin pour être compatible avec le proxy
             cors: {
                 origin: "*", // On autorise tout le monde pour éviter les blocages
                 methods: ["GET", "POST"]
