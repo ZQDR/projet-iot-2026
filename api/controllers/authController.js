@@ -152,6 +152,6 @@ exports.deleteUserById = async (req, res) => {
         if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
         res.json({ message: 'Utilisateur supprimé avec succès.' });
     } catch (err) {
-        res.status(500).json({ error: err });
+        res.status(500).json({ error: err.message });
     }
 };
