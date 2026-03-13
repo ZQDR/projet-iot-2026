@@ -19,10 +19,21 @@ exports.scanAndStart = async (req, res) => {
         const user = await UserModel.findById(userId);
         if (user.balance < 1.00) return res.status(403).json({ error: 'Solde insuffisant (1€ minimum).' });
 
+        // 1. On récupère l'index actuel de la prise AVANT de démarrer (compteur kilométrique)
+        const plugData = await PlugModel.findById(plugId);
+        const startIndex = plugData.last_index || 0;
+
         // On allume le courant et on démarre le chrono
         mqttService.turnOn(plugId);
         await ConsumptionModel.startSession(userId, plugId);
         await PlugModel.updateStatus(plugId, 'occupied');
+
+        // 2. On sauvegarde cet index de départ dans la session créée
+        const session = await ConsumptionModel.getActiveSession(userId, plugId);
+        if (session) {
+            // Mise à jour manuelle de la colonne index_start
+            await db.execute('UPDATE consumption SET index_start = ? WHERE id = ?', [startIndex, session.id]);
+        }
 
         res.json({ message: 'Session démarrée ! Le courant est activé.', plugId });
 
@@ -41,15 +52,18 @@ exports.stopCharge = async (req, res) => {
         const session = await ConsumptionModel.getActiveSession(userId, plugId);
         if (!session) return res.status(404).json({ error: "Aucune session active." });
 
-        // 1. Calcul de l'énergie et du coût (ex: 0.40€ / kWh)
-        const PRICE_PER_KWH = 0.40;
-        const startTime = new Date(session.start_time);
-        const endTime = new Date();
-        const durationHours = (endTime - startTime) / (1000 * 60 * 60); // Durée en heures
+        // 1. Récupération de la consommation RÉELLE
+        const plugData = await PlugModel.findById(plugId);
+        const currentIndex = plugData.last_index || 0;
+        const startIndex = session.index_start || 0;
+
+        // Calcul du delta (Fin - Début) en Wh, puis conversion en kWh
+        let realEnergyWh = currentIndex - startIndex;
+        if (realEnergyWh < 0) realEnergyWh = 0; // Sécurité si reset compteur
+        const energyKwh = realEnergyWh / 1000;
         
-        // NOTE: On estime une consommation moyenne (ex: 60W pour un PC portable).
-        const averagePowerKW = 0.060; 
-        const energyKwh = durationHours * averagePowerKW;
+        // Calcul du prix (ex: 0.50€ / kWh)
+        const PRICE_PER_KWH = 0.50;
         let cost = energyKwh * PRICE_PER_KWH;
 
         // --- OPTION : COÛT MINIMUM ---

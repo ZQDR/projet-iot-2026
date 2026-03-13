@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS plugs (
     status ENUM('libre', 'occupied', 'hs') DEFAULT 'libre', -- État pour l'appli
     state BOOLEAN DEFAULT FALSE, -- État électrique (TRUE = ON, FALSE = OFF)
     voltage FLOAT DEFAULT 0, -- Tension en Volts (pour la maintenance)
+    last_index FLOAT DEFAULT 0, -- Dernier index de consommation connu (Wh)
     last_ping TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Pour détecter si la prise est hors ligne
 );
 
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS consumption (
     plug_id VARCHAR(50),
     start_time DATETIME NOT NULL,
     end_time DATETIME,
+    index_start FLOAT DEFAULT 0, -- Index du compteur au début de la session (Wh)
     energy_kwh FLOAT DEFAULT 0, -- Consommation en kWh
     cost DECIMAL(10, 2) DEFAULT 0, -- Coût final de la session
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

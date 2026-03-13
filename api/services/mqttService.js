@@ -68,14 +68,21 @@ const mqttService = {
                 console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
                 const type = topicParts[2];
 
-                // Si c'est un message de puissance (selon le modèle de la prise)
-                if (type === 'relay' || type === 'power') {
+                // Si c'est un message de données (relay, power, emeter ou status)
+                if (type === 'relay' || type === 'power' || type === 'emeter' || type === 'status') {
                     try {
                         const data = JSON.parse(payload);
 
                         // 1. Gestion de la Puissance (Script 1 & 2)
                         if (data.power !== undefined) {
                             socketService.emit('power_update', { plugId, power: data.power });
+                        }
+
+                        // 1.bis Gestion de l'Énergie (On sauvegarde l'index en base)
+                        if (data.energy !== undefined || data.total !== undefined) {
+                            // On suppose que la valeur est en Wh (Watt-heure)
+                            const energyVal = data.energy || data.total;
+                            await db.execute('UPDATE plugs SET last_index = ? WHERE id = ?', [energyVal, plugId]);
                         }
 
                         // 1.bis Gestion de la Tension (Pour la maintenance proactive)
