@@ -48,16 +48,27 @@ class UserModel {
     }
 
     // Supprimer un utilisateur (RGPD - Droit à l'oubli)
-    static async delete(id) {
-        // Nettoyage préalable pour éviter les erreurs de contraintes SQL (Foreign Keys)
-        // On utilise try/catch pour ne pas planter si les tables n'existent pas encore
-        try { await db.execute('DELETE FROM consumption WHERE user_id = ?', [id]); } catch(e) {}
-        try { await db.execute('DELETE FROM transactions WHERE user_id = ?', [id]); } catch(e) {}
-        
-        const sql = 'DELETE FROM users WHERE id = ?';
-        const [result] = await db.execute(sql, [id]);
-        return result.affectedRows > 0;
+   static async delete(id) {
+    // 1. Vérification de l'identité de l'utilisateur
+    const checkSql = 'SELECT email FROM users WHERE id = ?';
+    const [rows] = await db.execute(checkSql, [id]);
+
+    // Si l'utilisateur existe et qu'il s'agit du fondateur, on bloque la suppression
+    if (rows.length > 0 && rows[0].email === 'lapulga@gmail.com') {
+        throw new Error("Action non autorisée : il est impossible de supprimer le fondateur.");
+        // Note : tu peux aussi utiliser "return false;" si tu préfères ne pas lever d'erreur.
     }
+
+    // 2. Nettoyage préalable pour éviter les erreurs de contraintes SQL (Foreign Keys)
+    // On utilise try/catch pour ne pas planter si les tables n'existent pas encore
+    try { await db.execute('DELETE FROM consumption WHERE user_id = ?', [id]); } catch(e) {}
+    try { await db.execute('DELETE FROM transactions WHERE user_id = ?', [id]); } catch(e) {}
+    
+    // 3. Suppression finale de l'utilisateur
+    const sql = 'DELETE FROM users WHERE id = ?';
+    const [result] = await db.execute(sql, [id]);
+    return result.affectedRows > 0;
+}
     
 }
 
