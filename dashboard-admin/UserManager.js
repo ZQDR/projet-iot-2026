@@ -134,12 +134,27 @@ class UserManager {
             });
 
             if (response.ok) {
-                Swal.fire('Supprimé !', 'L\'utilisateur a été supprimé.', 'success');
-                this.selectedUserId = null;
-                this.fetchAllUsers(); // Rafraîchir la liste
-            } else {
-                Swal.fire('Erreur', 'Impossible de supprimer l\'utilisateur.', 'error');
-            }
+    Swal.fire('Supprimé !', 'L\'utilisateur a été supprimé.', 'success');
+    this.selectedUserId = null;
+    this.fetchAllUsers(); // Rafraîchir la liste
+} else {
+    // Message par défaut au cas où l'API ne renvoie pas de détails
+    let errorMessage = 'Impossible de supprimer l\'utilisateur.';
+    
+    try {
+        // On parse la réponse de l'API pour récupérer les données de l'erreur
+        const errorData = await response.json();
+        
+        // On récupère le message (adapte .message ou .error selon ce que ton backend envoie exactement)
+        errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch (e) {
+        // Si l'API renvoie du texte brut ou rien du tout, on tombe ici et on garde le message par défaut
+        console.error("Erreur lors de la lecture de la réponse de l'API", e);
+    }
+
+    // On affiche l'erreur dans SweetAlert
+    Swal.fire('Erreur', errorMessage, 'error');
+}
         } catch (error) {
             console.error("Erreur suppression:", error);
         }
