@@ -2,6 +2,7 @@
 const mqtt = require('mqtt');
 const mqttConfig = require('../config/mqtt'); // On récupère ta config sécurisée
 const socketService = require('./socketService'); // Lien vers le WebSocket
+const PlugModel = require('../models/plugModel'); // <-- On importe le modèle
 const db = require('../config/db');
 
 let client = null;
@@ -32,25 +33,28 @@ const mqttService = {
             // Analyse du topic pour trouver l'ID de la prise (ex: Shellies/S1-01/status)
             const topicParts = topic.split('/');
             if (topicParts.length < 2) return; // Topic invalide, on ignore
-            
             const plugId = topicParts[1];
             if (!plugId) return; // ID de prise vide, on ignore
 
             // --- NOUVEAU : Filtre pour éviter les faux positifs ---
             // On définit une liste de mots-clés qui sont des parties de topics, mais pas des ID de prises.
-            const nonDeviceKeywords = ['online', 'status', 'command', 'announce', 'relay', 'power', 'energy', 'apower', 'test'];
+            const nonDeviceKeywords = ['online', 'status', 'command', 'announce', 'relay', 'power', 'energy', 'apower', 'test', 'events', 'debug'];
             if (nonDeviceKeywords.includes(plugId)) {
-                // Ce message est sur un topic générique (ex: "Shellies/online"), on l'ignore pour l'auto-découverte.
-                console.log(`📢 Message sur un topic générique ignoré pour l'auto-découverte : ${topic}`);
+                // On ignore immédiatement les mots-clés techniques génériques
                 return;
             }
 
-            // --- AJOUT DYNAMIQUE ET PING ---
             try {
-                // 1. Vérification existence
-                const [rows] = await db.execute('SELECT id FROM plugs WHERE id = ?', [plugId]);
+                // 1. Vérification si la prise existe DÉJÀ en BDD
+                const plug = await PlugModel.findById(plugId);
                 
-                if (rows.length === 0) {
+                // --- FILTRE STRICT : Doit contenir "Prise" OU exister déjà en BDD ---
+                if (!plugId.includes("Prise") && !plug) {
+                    return; // On ignore : Ce n'est pas une "Prise" ET elle n'est pas connue dans la base
+                }
+
+                // --- AJOUT DYNAMIQUE ---
+                if (!plug) {
                     // 2. Tentative d'insertion (isolée dans un try/catch pour ne pas tout bloquer)
                     try {
                         await db.execute('INSERT INTO plugs (id, status, state) VALUES (?, "libre", 0)', [plugId]);
