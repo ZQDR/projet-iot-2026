@@ -135,20 +135,20 @@ turnOff: (plugId) => {
 
     // Fonction pour envoyer un ordre à une prise (ON/OFF)
     // Utilisée par le contrôleur quand l'élève scanne le QR Code
-    sendCommand: (plugId, action) => {
-    if (client && client.connected) {
-        const topic = `Shellies/${plugId}/command`; 
-        
-        // On transforme l'action "off" en objet JSON {"state": "off"}
-        const payloadObj = { state: action };
-        const message = JSON.stringify(payloadObj); 
-        
-        client.publish(topic, message);
-        console.log(`📤 Commande envoyée : ${message} -> ${topic}`);
-    } else {
-        console.error("⚠️ Impossible d'envoyer la commande : Client MQTT déconnecté.");
-    }
-},
+sendCommand: (plugId, action) => {
+        if (client && client.connected) {
+            // 1. Le topic EXACT pour contrôler une prise Shelly (Gen 1)
+            const topic = `Shellies/${plugId}/relay/0/command`; 
+            
+            // 2. La commande en minuscules ("on" ou "off" en texte brut)
+            const message = action.toLowerCase(); 
+            
+            client.publish(topic, message);
+            console.log(`📤 Commande envoyée : ${message} -> ${topic}`);
+        } else {
+            console.error("⚠️ Impossible d'envoyer la commande : Client MQTT déconnecté.");
+        }
+    },
 
     // Fonction pour éteindre toutes les prises marquées comme "libre"
     turnOffUnusedPlugs: async () => {
