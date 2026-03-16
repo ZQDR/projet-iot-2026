@@ -136,31 +136,18 @@ turnOff: (plugId) => {
     // Fonction pour envoyer un ordre à une prise (ON/OFF)
     // Utilisée par le contrôleur quand l'élève scanne le QR Code
 sendCommand: (plugId, action) => {
-        if (!client || !client.connected) return;
-
-        const actionMin = action.toLowerCase(); // "off"
-        const actionMaj = action.toUpperCase(); // "OFF"
-        const actionJson = JSON.stringify({ state: actionMin }); // {"state":"off"}
-        const actionTasmota = JSON.stringify({ power: actionMaj }); // {"power":"OFF"}
-
-        // Une liste des topics les plus utilisés dans le monde IoT
-        const tests = [
-            { topic: `Shellies/${plugId}/command`, payload: actionMin },
-            { topic: `Shellies/${plugId}/command`, payload: actionMaj },
-            { topic: `Shellies/${plugId}/command`, payload: actionJson },
-            { topic: `Shellies/${plugId}/relay/0/command`, payload: actionMin },
-            { topic: `Shellies/${plugId}/relay/0/command`, payload: actionJson },
-            { topic: `cmnd/Shellies/${plugId}/POWER`, payload: actionMaj }, // Tasmota
-            { topic: `Shellies/${plugId}/set`, payload: actionMin },
-            { topic: `Shellies/${plugId}/set`, payload: actionJson },
-            { topic: `Shellies/${plugId}/rpc`, payload: JSON.stringify({id:1, src:"node", method:"Switch.Set", params:{id:0, on: (actionMin === 'on')}}) } // Shelly Gen 2
-        ];
-
-        console.log("🧨 Lancement du Brute Force MQTT...");
-        tests.forEach(test => {
-            client.publish(test.topic, test.payload);
-            console.log(`Essai -> Topic: [${test.topic}] | Payload: ${test.payload}`);
-        });
+        if (client && client.connected) {
+            // Le topic EXACT pour contrôler une prise Shelly Gen 2 (Gamme Plus/Pro)
+            const topic = `Shellies/${plugId}/command/switch:0`; 
+            
+            // On envoie "on" ou "off" en minuscules
+            const message = action.toLowerCase(); 
+            
+            client.publish(topic, message);
+            console.log(`📤 Commande Gen 2 envoyée : ${message} -> ${topic}`);
+        } else {
+            console.error("⚠️ Impossible d'envoyer la commande : Client MQTT déconnecté.");
+        }
     },
 
     // Fonction pour éteindre toutes les prises marquées comme "libre"
