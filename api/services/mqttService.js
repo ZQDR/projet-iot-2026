@@ -136,18 +136,31 @@ turnOff: (plugId) => {
     // Fonction pour envoyer un ordre à une prise (ON/OFF)
     // Utilisée par le contrôleur quand l'élève scanne le QR Code
 sendCommand: (plugId, action) => {
-        if (client && client.connected) {
-            // Le topic /set est le standard des passerelles MQTT / Zigbee
-            const topic = `Shellies/${plugId}/set`; 
-            
-            // On transforme l'ordre en objet JSON valide : {"state": "off"}
-            const message = JSON.stringify({ state: action.toLowerCase() }); 
-            
-            client.publish(topic, message);
-            console.log(`📤 Commande envoyée : ${message} -> ${topic}`);
-        } else {
-            console.error("⚠️ Impossible d'envoyer la commande : Client MQTT déconnecté.");
-        }
+        if (!client || !client.connected) return;
+
+        const actionMin = action.toLowerCase(); // "off"
+        const actionMaj = action.toUpperCase(); // "OFF"
+        const actionJson = JSON.stringify({ state: actionMin }); // {"state":"off"}
+        const actionTasmota = JSON.stringify({ power: actionMaj }); // {"power":"OFF"}
+
+        // Une liste des topics les plus utilisés dans le monde IoT
+        const tests = [
+            { topic: `Shellies/${plugId}/command`, payload: actionMin },
+            { topic: `Shellies/${plugId}/command`, payload: actionMaj },
+            { topic: `Shellies/${plugId}/command`, payload: actionJson },
+            { topic: `Shellies/${plugId}/relay/0/command`, payload: actionMin },
+            { topic: `Shellies/${plugId}/relay/0/command`, payload: actionJson },
+            { topic: `cmnd/Shellies/${plugId}/POWER`, payload: actionMaj }, // Tasmota
+            { topic: `Shellies/${plugId}/set`, payload: actionMin },
+            { topic: `Shellies/${plugId}/set`, payload: actionJson },
+            { topic: `Shellies/${plugId}/rpc`, payload: JSON.stringify({id:1, src:"node", method:"Switch.Set", params:{id:0, on: (actionMin === 'on')}}) } // Shelly Gen 2
+        ];
+
+        console.log("🧨 Lancement du Brute Force MQTT...");
+        tests.forEach(test => {
+            client.publish(test.topic, test.payload);
+            console.log(`Essai -> Topic: [${test.topic}] | Payload: ${test.payload}`);
+        });
     },
 
     // Fonction pour éteindre toutes les prises marquées comme "libre"
