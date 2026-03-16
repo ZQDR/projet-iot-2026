@@ -137,11 +137,11 @@ turnOff: (plugId) => {
     // Utilisée par le contrôleur quand l'élève scanne le QR Code
 sendCommand: (plugId, action) => {
         if (client && client.connected) {
-            // 1. Le topic EXACT pour contrôler une prise Shelly (Gen 1)
-            const topic = `Shellies/${plugId}/relay/0/command`; 
+            // Le topic /set est le standard des passerelles MQTT / Zigbee
+            const topic = `Shellies/${plugId}/set`; 
             
-            // 2. La commande en minuscules ("on" ou "off" en texte brut)
-            const message = action.toLowerCase(); 
+            // On transforme l'ordre en objet JSON valide : {"state": "off"}
+            const message = JSON.stringify({ state: action.toLowerCase() }); 
             
             client.publish(topic, message);
             console.log(`📤 Commande envoyée : ${message} -> ${topic}`);
