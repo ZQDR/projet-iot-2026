@@ -126,14 +126,12 @@ const mqttService = {
     },
 
     // Raccourci pour allumer
-    turnOn: (plugId) => {
-        mqttService.sendCommand(plugId, 'ON');
-    },
-
-    // Raccourci pour éteindre
-    turnOff: (plugId) => {
-        mqttService.sendCommand(plugId, 'OFF');
-    },
+   turnOn: (plugId) => {
+    mqttService.sendCommand(plugId, 'on'); // Minuscule
+},
+turnOff: (plugId) => {
+    mqttService.sendCommand(plugId, 'off'); // Minuscule
+},
 
     // Fonction pour envoyer un ordre à une prise (ON/OFF)
     // Utilisée par le contrôleur quand l'élève scanne le QR Code
