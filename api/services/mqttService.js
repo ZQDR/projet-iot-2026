@@ -78,14 +78,23 @@ const mqttService = {
                         const data = JSON.parse(payload);
 
                         // 1. Gestion de la Puissance (Script 1 & 2)
-                        if (data.power !== undefined) {
-                            socketService.emit('power_update', { plugId, power: data.power });
+                        let currentPower = undefined;
+                        if (data.power !== undefined) currentPower = data.power;
+                        else if (data.apower !== undefined) currentPower = data.apower; // Support Shelly Gen 2
+
+                        if (currentPower !== undefined) {
+                            socketService.emit('power_update', { plugId, power: currentPower });
                         }
 
                         // 1.bis Gestion de l'Énergie (On sauvegarde l'index en base)
-                        if (data.energy !== undefined || data.total !== undefined) {
-                            // On suppose que la valeur est en Wh (Watt-heure)
-                            const energyVal = data.energy || data.total;
+                        let energyVal = undefined;
+                        if (data.energy !== undefined) energyVal = data.energy;
+                        else if (data.total !== undefined) energyVal = data.total;
+                        else if (data.aenergy !== undefined && data.aenergy.total !== undefined) {
+                            energyVal = data.aenergy.total; // Support Shelly Gen 2
+                        }
+
+                        if (energyVal !== undefined) {
                             await db.execute('UPDATE plugs SET last_index = ? WHERE id = ?', [energyVal, plugId]);
                         }
 
@@ -94,9 +103,15 @@ const mqttService = {
                             await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [data.voltage, plugId]);
                         }
 
-                        // 2. Gestion de l'État ON/OFF (Script 3 : { "state": "on" })
+                        // 2. Gestion de l'État ON/OFF (Gen 1 & Gen 2)
+                        let ison = undefined;
                         if (data.state !== undefined) {
-                            const ison = (data.state === 'on');
+                            ison = (data.state === 'on');
+                        } else if (data.output !== undefined) {
+                            ison = (data.output === true); // Support Shelly Gen 2
+                        }
+
+                        if (ison !== undefined) {
                             await db.execute('UPDATE plugs SET state = ? WHERE id = ?', [ison, plugId]);
 
                             // WEBSOCKET : On prévient le dashboard immédiatement

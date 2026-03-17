@@ -10,6 +10,7 @@ const db = require('../config/db');
 // --- QUAND MEHDI SCANNE LE QR CODE ---
 exports.scanAndStart = async (req, res) => {
     try {
+        console.log(`[CONTROLLER] Appel de scanAndStart reçu. Body:`, req.body);
         const userId = req.user.id; 
         const { plugId } = req.body; // C'est le texte issu du QR Code (ex: "S1-01")
 
