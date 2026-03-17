@@ -54,7 +54,10 @@ class PriseManager {
             // 1. Mise à jour de la puissance ou de l'état
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
-            this.socket.on('status_update', (data) => this.updateRowUI(data.plugId, { status: data.status }));
+            this.socket.on('status_update', (data) => {
+                console.log(`🔄 WebSocket : Changement de statut pour ${data.plugId} -> ${data.status}`);
+                this.updateRowUI(data.plugId, { status: data.status });
+            });
             
             // 1.5 Rafraîchissement des données utilisateur (solde)
             this.socket.on('user_data_updated', () => {
@@ -85,8 +88,9 @@ class PriseManager {
             if (data.status !== undefined) row.dataset.status = data.status;
 
             // 2. Récupération de l'état actuel pour affichage
-            // Note: dataset stocke tout en string, donc "true" ou "false"
-            const currentState = row.dataset.state === "true" || row.dataset.state === true;
+            // CORRECTION CRITIQUE : MySQL renvoie 1/0, le WebSocket renvoie true/false.
+            const rawState = row.dataset.state;
+            const currentState = rawState === "true" || rawState === true || rawState === "1" || rawState == 1;
             const currentPower = row.dataset.power || 0;
             
             if (cellState) {
