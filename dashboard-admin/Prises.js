@@ -55,7 +55,9 @@ class PriseManager {
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
             this.socket.on('status_update', (data) => {
-                console.log(`🔄 WebSocket : Changement de statut pour ${data.plugId} -> ${data.status}`);
+                // --- TEST DE DÉBOGAGE DÉFINITIF ---
+                // Si cette alerte s'affiche, la communication est BONNE.
+                alert(`TEST: Événement 'status_update' reçu pour ${data.plugId} -> nouveau statut : ${data.status}`);
                 this.updateRowUI(data.plugId, { status: data.status });
             });
             
