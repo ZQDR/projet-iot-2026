@@ -233,6 +233,7 @@ class PriseManager {
             tdEtat.textContent = `${prise.status} (${elecState})`;
             
             if(prise.state) {
+                tdEtat.innerHTML = "Occupée";
                 tdEtat.style.color = "#27ae60";
                 tdEtat.style.fontWeight = "bold";
             }
