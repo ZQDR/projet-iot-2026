@@ -23,7 +23,7 @@ exports.scanAndStart = async (req, res) => {
 
         // 1. On récupère l'index actuel de la prise AVANT de démarrer (compteur kilométrique)
         const plugData = await PlugModel.findById(plugId);
-        const startIndex = plugData.last_index || 0;
+        const startIndex = parseFloat(plugData.last_index) || 0;
 
         // On allume le courant et on démarre le chrono
         mqttService.turnOn(plugId);
@@ -94,7 +94,7 @@ exports.stopCharge = async (req, res) => {
 
         res.json({
             message: "Session terminée",
-            energy_kwh: energyKwh.toFixed(3),
+            energy_kwh: energyKwh.toFixed(4), // 4 décimales pour voir les micro-consommations
             cost: `${cost.toFixed(2)}€`,
             newBalance: `${newBalance.toFixed(2)}€`
         });
