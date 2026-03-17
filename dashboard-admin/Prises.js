@@ -60,9 +60,6 @@ class PriseManager {
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
             this.socket.on('status_update', (data) => {
-                // --- TEST DE DÉBOGAGE DÉFINITIF ---
-                // Si cette alerte s'affiche, la communication est BONNE.
-                alert(`TEST: Événement 'status_update' reçu pour ${data.plugId} -> nouveau statut : ${data.status}`);
                 this.updateRowUI(data.plugId, { status: data.status });
             });
             
@@ -102,10 +99,13 @@ class PriseManager {
             
             if (cellState) {
                 // 3. Construction du texte d'état
-                const textState = currentState ? "⚡ ON" : "OFF";
-                const currentStatus = row.dataset.status || "Inconnu";
+                const textState = currentState ? "⚡ ALLUMÉE" : "ÉTEINTE";
+                const rawStatus = row.dataset.status || "Inconnu";
                 
-                let displayText = `${currentStatus} (${textState})`;
+                // Traduction propre pour l'affichage
+                const displayStatus = rawStatus === 'occupied' ? "Occupée" : (rawStatus === 'libre' ? "Libre" : rawStatus);
+                
+                let displayText = `${displayStatus} (${textState})`;
 
                 // Si c'est allumé et qu'on a de la puissance, on l'affiche
                 if (currentState && currentPower > 0) {
@@ -228,12 +228,12 @@ class PriseManager {
             // Colonne État
             const tdEtat = document.createElement("td")
             tdEtat.className = "state-cell"; // Classe pour ciblage facile
-            // On affiche le status (libre/occupied) et l'état électrique (ON/OFF)
-            const elecState = prise.state ? "⚡ ON" : "OFF";
-            tdEtat.textContent = `${prise.status} (${elecState})`;
+            // On affiche le status (libre/occupied) et l'état électrique (ALLUMÉE/ÉTEINTE)
+            const displayStatus = prise.status === 'occupied' ? "Occupée" : (prise.status === 'libre' ? "Libre" : prise.status);
+            const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
+            tdEtat.textContent = `${displayStatus} (${elecState})`;
             
             if(prise.state) {
-                tdEtat.innerHTML = "Occupée";
                 tdEtat.style.color = "#27ae60";
                 tdEtat.style.fontWeight = "bold";
             }
