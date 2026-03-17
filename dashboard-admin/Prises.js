@@ -229,7 +229,7 @@ class PriseManager {
             const tdEtat = document.createElement("td")
             tdEtat.className = "state-cell"; // Classe pour ciblage facile
             // On affiche le status (libre/occupied) et l'état électrique (ALLUMÉE/ÉTEINTE)
-            const displayStatus = prise.status === 'occupied' ? "Occupée" : (prise.status === 'libre' ? "Libre" : prise.status);
+            const displayStatus = prise.status === 'Libre' ? "Occupée" : (prise.status === 'libre' ? "Libre" : prise.status);
             const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
             tdEtat.textContent = `${displayStatus} (${elecState})`;
             
