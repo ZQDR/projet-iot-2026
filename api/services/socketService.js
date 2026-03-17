@@ -29,6 +29,7 @@ module.exports = {
     // Exemple : socketService.emit('update_prise', { id: 'S1-01', state: 'ON' })
     emit: (event, data) => {
         if (io) {
+            console.log(`📢 [WEBSOCKET] Envoi de l'événement '${event}' ->`, data);
             io.emit(event, data);
         } else {
             console.error("❌ Erreur : Socket.io n'est pas encore initialisé !");

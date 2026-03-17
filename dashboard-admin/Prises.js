@@ -51,6 +51,11 @@ class PriseManager {
             this.socket.on('connect', () => console.log("✅ WebSocket connecté avec ID:", this.socket.id));
             this.socket.on('connect_error', (err) => console.error("❌ Erreur connexion WebSocket:", err));
 
+            // 📡 ÉCOUTE ABSOLUE : Affiche TOUS les messages reçus du serveur
+            this.socket.onAny((eventName, ...args) => {
+                console.log(`📥 [SOCKET REÇU] Événement: ${eventName}`, args);
+            });
+
             // 1. Mise à jour de la puissance ou de l'état
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
