@@ -72,8 +72,8 @@ const mqttService = {
                 console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
                 const type = topicParts[2];
 
-                // Si c'est un message de données (Gen 1: status/relay/power | Gen 2: events/status)
-                if (['relay', 'power', 'emeter', 'status', 'events'].includes(type)) {
+                // Si c'est un message de données (Gen 1: status/relay/power | Gen 2: events/status | autres: test)
+                if (['relay', 'power', 'emeter', 'status', 'events', 'test'].includes(type)) {
                     try {
                         const data = JSON.parse(payload);
 
@@ -96,6 +96,7 @@ const mqttService = {
                         let energyVal = undefined;
                         if (plugData.energy !== undefined) energyVal = plugData.energy;
                         else if (plugData.total !== undefined) energyVal = plugData.total;
+                        else if (plugData.total_wh !== undefined) energyVal = plugData.total_wh;
                         else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) {
                             energyVal = plugData.aenergy.total; // Support Shelly Gen 2
                         }
@@ -115,6 +116,8 @@ const mqttService = {
                             ison = (plugData.state === 'on');
                         } else if (plugData.output !== undefined) {
                             ison = (plugData.output === true); // Support Shelly Gen 2
+                        } else if (plugData.status !== undefined) {
+                            ison = (plugData.status === 'on');
                         }
 
                         if (ison !== undefined) {
