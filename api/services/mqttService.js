@@ -72,15 +72,21 @@ const mqttService = {
                 console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
                 const type = topicParts[2];
 
-                // Si c'est un message de données (relay, power, emeter ou status)
-                if (type === 'relay' || type === 'power' || type === 'emeter' || type === 'status') {
+                // Si c'est un message de données (Gen 1: status/relay/power | Gen 2: events/status)
+                if (['relay', 'power', 'emeter', 'status', 'events'].includes(type)) {
                     try {
                         const data = JSON.parse(payload);
 
+                        // Normalisation : Si c'est un événement RPC Shelly Gen 2 (topic: events/rpc)
+                        let plugData = data;
+                        if (data.method === 'NotifyStatus' && data.params && data.params['switch:0']) {
+                            plugData = data.params['switch:0'];
+                        }
+
                         // 1. Gestion de la Puissance (Script 1 & 2)
                         let currentPower = undefined;
-                        if (data.power !== undefined) currentPower = data.power;
-                        else if (data.apower !== undefined) currentPower = data.apower; // Support Shelly Gen 2
+                        if (plugData.power !== undefined) currentPower = plugData.power;
+                        else if (plugData.apower !== undefined) currentPower = plugData.apower; // Support Shelly Gen 2
 
                         if (currentPower !== undefined) {
                             socketService.emit('power_update', { plugId, power: currentPower });
@@ -88,10 +94,10 @@ const mqttService = {
 
                         // 1.bis Gestion de l'Énergie (On sauvegarde l'index en base)
                         let energyVal = undefined;
-                        if (data.energy !== undefined) energyVal = data.energy;
-                        else if (data.total !== undefined) energyVal = data.total;
-                        else if (data.aenergy !== undefined && data.aenergy.total !== undefined) {
-                            energyVal = data.aenergy.total; // Support Shelly Gen 2
+                        if (plugData.energy !== undefined) energyVal = plugData.energy;
+                        else if (plugData.total !== undefined) energyVal = plugData.total;
+                        else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) {
+                            energyVal = plugData.aenergy.total; // Support Shelly Gen 2
                         }
 
                         if (energyVal !== undefined) {
@@ -99,16 +105,16 @@ const mqttService = {
                         }
 
                         // 1.bis Gestion de la Tension (Pour la maintenance proactive)
-                        if (data.voltage !== undefined) {
-                            await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [data.voltage, plugId]);
+                        if (plugData.voltage !== undefined) {
+                            await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [plugData.voltage, plugId]);
                         }
 
                         // 2. Gestion de l'État ON/OFF (Gen 1 & Gen 2)
                         let ison = undefined;
-                        if (data.state !== undefined) {
-                            ison = (data.state === 'on');
-                        } else if (data.output !== undefined) {
-                            ison = (data.output === true); // Support Shelly Gen 2
+                        if (plugData.state !== undefined) {
+                            ison = (plugData.state === 'on');
+                        } else if (plugData.output !== undefined) {
+                            ison = (plugData.output === true); // Support Shelly Gen 2
                         }
 
                         if (ison !== undefined) {
