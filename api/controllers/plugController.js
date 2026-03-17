@@ -4,6 +4,7 @@ const UserModel = require('../models/userModel');
 const TransactionModel = require('../models/transactionModel'); // <-- NOUVEAU
 const qrcode = require('qrcode');
 const mqttService = require('../services/mqttService');
+const socketService = require('../services/socketService');
 const db = require('../config/db');
 
 // --- QUAND MEHDI SCANNE LE QR CODE ---
@@ -27,6 +28,7 @@ exports.scanAndStart = async (req, res) => {
         mqttService.turnOn(plugId);
         await ConsumptionModel.startSession(userId, plugId);
         await PlugModel.updateStatus(plugId, 'occupied');
+        socketService.emit('status_update', { plugId, status: 'occupied' });
 
         // 2. On sauvegarde cet index de départ dans la session créée
         const session = await ConsumptionModel.getActiveSession(userId, plugId);
@@ -82,7 +84,11 @@ exports.stopCharge = async (req, res) => {
         // 4. Clôture physique et logicielle
         await ConsumptionModel.closeSession(session.id, energyKwh, cost);
         await PlugModel.updateStatus(plugId, 'libre');
+        socketService.emit('status_update', { plugId, status: 'libre' });
         mqttService.turnOff(plugId);
+
+        // On prévient les dashboards que les données d'un utilisateur (solde, historique) ont changé
+        socketService.emit('user_data_updated', { userId: userId });
 
         res.json({
             message: "Session terminée",

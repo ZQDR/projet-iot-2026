@@ -3,6 +3,7 @@ class ConsumptionGraph{
         this.apiUrl=apiUrl;
         this.userManager = userManager;
         this.chart=null;
+        this.socket = null;
         
         // SÉCURITÉ DOM : Attendre que le HTML soit chargé pour trouver <canvas> et <ul>
         if (document.readyState === "loading") {
@@ -27,8 +28,27 @@ class ConsumptionGraph{
                     this.loadUserConsumption(userId);
                 }
             });
+
+            this.initSocket();
         } else {
             console.warn("Graph.js : Éléments 'consoChart' ou 'userList' introuvables.");
+        }
+    }
+
+    initSocket() {
+        if (typeof io !== 'undefined') {
+            const socketUrl = this.apiUrl.replace('/api', '');
+            this.socket = io(socketUrl, {
+                path: "/api/socket.io"
+            });
+
+            this.socket.on('user_data_updated', (data) => {
+                // On vérifie si un utilisateur est sélectionné ET si c'est le bon
+                if (this.userManager && this.userManager.selectedUserId && this.userManager.selectedUserId == data.userId) {
+                    console.log(`📊 Mise à jour du graphique pour l'utilisateur ${data.userId}...`);
+                    this.loadUserConsumption(data.userId);
+                }
+            });
         }
     }
 

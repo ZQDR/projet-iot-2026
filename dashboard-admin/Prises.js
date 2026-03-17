@@ -54,6 +54,14 @@ class PriseManager {
             // 1. Mise à jour de la puissance ou de l'état
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
+            this.socket.on('status_update', (data) => this.updateRowUI(data.plugId, { status: data.status }));
+            
+            // 1.5 Rafraîchissement des données utilisateur (solde)
+            this.socket.on('user_data_updated', () => {
+                if (this.userManager) {
+                    this.userManager.fetchAllUsers();
+                }
+            });
             
             // 2. Nouvelle prise détectée
             this.socket.on('new_plug_added', () => {
@@ -74,6 +82,7 @@ class PriseManager {
             // 1. Mise à jour des données en mémoire (data-attributes)
             if (data.state !== undefined) row.dataset.state = data.state;
             if (data.power !== undefined) row.dataset.power = data.power;
+            if (data.status !== undefined) row.dataset.status = data.status;
 
             // 2. Récupération de l'état actuel pour affichage
             // Note: dataset stocke tout en string, donc "true" ou "false"
