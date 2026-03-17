@@ -102,7 +102,10 @@ const mqttService = {
                         }
 
                         if (energyVal !== undefined) {
+                            console.log(`💾 [DEBUG BDD] Mise à jour de last_index pour ${plugId} : ${energyVal} (Type: ${typeof energyVal})`);
                             await db.execute('UPDATE plugs SET last_index = ? WHERE id = ?', [energyVal, plugId]);
+                        } else {
+                            console.log(`⚠️ [DEBUG BDD] Aucune donnée d'énergie trouvée dans ce message pour ${plugId}.`);
                         }
 
                         // 1.bis Gestion de la Tension (Pour la maintenance proactive)
