@@ -28,7 +28,7 @@ socketService.init(server); // Démarrage WebSocket
 mqttService.connect();      // Connexion au broker MQTT HiveMQ
 
 // Montage des Routes
-// CORRECTION CRITIQUE : On écoute sur les deux chemins (avec et sans /api) car le proxy supprime le préfixe
+// CORRECTION CRITIQUE : On écoute sur les deux chemins (avec et sans /api) car le proxy supprime le préf
 app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/plugs', '/plugs'], plugRoutes);
 app.use(['/api/consumption', '/consumption'], consumptionRoutes);
