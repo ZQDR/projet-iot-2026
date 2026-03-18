@@ -68,7 +68,12 @@ class PriseManager {
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
             this.socket.on('status_update', (data) => {
-                this.updateRowUI(data.plugId, { status: data.status });
+                this.updateRowUI(data.plugId, { status: data.status, username: data.username });
+            });
+
+            // 1.5. Afficher la consommation en direct sur la ligne de la prise
+            this.socket.on('live_consumption', (data) => {
+                this.updateRowUI(data.plugId, { energyWh: data.energyWh, cost: data.cost, username: data.username });
             });
             
             // 2. Nouvelle prise détectée
@@ -91,12 +96,25 @@ class PriseManager {
             if (data.state !== undefined) row.dataset.state = data.state;
             if (data.power !== undefined) row.dataset.power = data.power;
             if (data.status !== undefined) row.dataset.status = data.status;
+            if (data.energyWh !== undefined) row.dataset.energyWh = data.energyWh;
+            if (data.cost !== undefined) row.dataset.cost = data.cost;
+            if (data.username !== undefined) row.dataset.username = data.username;
+
+            // Réinitialiser l'énergie et le coût si la prise redevient libre ou en maintenance
+            if (data.status === 'libre' || data.status === 'hs') {
+                row.dataset.energyWh = 0;
+                row.dataset.cost = 0;
+                row.dataset.username = "";
+            }
 
             // 2. Récupération de l'état actuel pour affichage
             // CORRECTION CRITIQUE : MySQL renvoie 1/0, le WebSocket renvoie true/false.
             const rawState = row.dataset.state;
             const currentState = rawState === "true" || rawState === true || rawState === "1" || rawState == 1;
             const currentPower = row.dataset.power || 0;
+            const currentEnergy = parseFloat(row.dataset.energyWh) || 0;
+            const currentCost = parseFloat(row.dataset.cost) || 0;
+            const currentUsername = row.dataset.username || "";
             
             if (cellState) {
                 // 3. Construction du texte d'état
@@ -105,12 +123,20 @@ class PriseManager {
                 
                 // Traduction propre pour l'affichage
                 let displayStatus = rawStatus === 'occupied' ? "Occupée" : (rawStatus === 'libre' ? "Libre" : (rawStatus === 'hs' ? "🔴 Maintenance" : rawStatus));
+                if (rawStatus === 'occupied' && currentUsername) {
+                    displayStatus = `Occupée par ${currentUsername}`;
+                }
                 
                 let displayText = `${displayStatus} (${textState})`;
 
                 // Si c'est allumé et qu'on a de la puissance, on l'affiche
                 if (currentState && currentPower > 0) {
                     displayText += ` - ${currentPower} W`;
+                }
+                
+                // Si la prise est occupée, on ajoute l'énergie et le coût accumulés
+                if (rawStatus === 'occupied' && currentEnergy > 0) {
+                    displayText += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(2)} €`;
                 }
 
                 cellState.textContent = displayText;
@@ -257,6 +283,9 @@ class PriseManager {
             tr.dataset.status = prise.status;
             tr.dataset.state = prise.state; // Pour le suivi WebSocket
             tr.dataset.power = 0; // Init à 0
+            tr.dataset.energyWh = 0;
+            tr.dataset.cost = 0;
+            tr.dataset.username = prise.username || "";
 
             // Gestion de la sélection (Click sur la ligne)
             tr.style.cursor = "pointer";
@@ -277,6 +306,9 @@ class PriseManager {
             tdEtat.className = "state-cell"; // Classe pour ciblage facile
             // On affiche le status (libre/occupied) et l'état électrique (ALLUMÉE/ÉTEINTE)
             let displayStatus = prise.status === 'occupied' ? "Occupée" : (prise.status === 'libre' ? "Libre" : (prise.status === 'hs' ? "🔴 Maintenance" : prise.status));
+            if (prise.status === 'occupied' && tr.dataset.username) {
+                displayStatus = `Occupée par ${tr.dataset.username}`;
+            }
             const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
             tdEtat.textContent = `${displayStatus} (${elecState})`;
             

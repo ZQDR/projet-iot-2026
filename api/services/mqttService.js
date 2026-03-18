@@ -135,14 +135,16 @@ const mqttService = {
                             let currentCost = Math.max(0.05, energyKwh * 0.50); // Calcul du coût réel (minimum 5 centimes)
 
                             // Récupération du solde initial de l'utilisateur
-                            const [users] = await db.execute('SELECT balance FROM users WHERE id = ?', [userId]);
+                            const [users] = await db.execute('SELECT username, balance FROM users WHERE id = ?', [userId]);
                             if (users.length > 0) {
                                 const initialBalance = parseFloat(users[0].balance);
+                                const username = users[0].username;
                                 const currentBalance = initialBalance - currentCost;
 
                                 console.log(`🔌 [WS] Envoi live_consumption: User=${userId}, Wh=${currentEnergyWh}, Solde=${currentBalance.toFixed(2)}`);
                                 socketService.emit('live_consumption', {
                                     userId: userId,
+                                    username: username,
                                     plugId: plugId,
                                     sessionId: activeSession.id,
                                     energyWh: currentEnergyWh,

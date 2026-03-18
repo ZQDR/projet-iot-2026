@@ -30,7 +30,7 @@ exports.scanAndStart = async (req, res) => {
         await ConsumptionModel.startSession(userId, plugId);
         await PlugModel.updateStatus(plugId, 'occupied');
         console.log(`🟢 [CONTROLLER] Prise ${plugId} démarrée. Déclenchement du WebSocket...`);
-        socketService.emit('status_update', { plugId, status: 'occupied' });
+        socketService.emit('status_update', { plugId, status: 'occupied', username: user.username });
 
         // 2. On sauvegarde cet index de départ dans la session créée
         const session = await ConsumptionModel.getActiveSession(userId, plugId);
@@ -135,7 +135,13 @@ exports.generateQrCode = async (req, res) => {
 // --- POUR LE DASHBOARD : LISTER TOUTES LES PRISES ---
 exports.getAllPlugs = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM plugs');
+        const sql = `
+            SELECT p.*, u.username 
+            FROM plugs p 
+            LEFT JOIN consumption c ON p.id = c.plug_id AND c.end_time IS NULL 
+            LEFT JOIN users u ON c.user_id = u.id
+        `;
+        const [rows] = await db.execute(sql);
         res.json(rows);
     } catch (err) {
         console.error(err);
