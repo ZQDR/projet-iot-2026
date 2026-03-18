@@ -41,12 +41,14 @@
             flex-direction: column;
             margin-bottom: 15px;
         }
-        input {
+        input, select.form-select {
             padding: 12px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
             margin-top: 5px;
+            width: 100%;
+            box-sizing: border-box;
         }
         button {
             padding: 12px;
@@ -147,8 +149,10 @@
 </div>
 
     <div class="form-group">
-        <label>ID de la prise (ex: S1-01) :</label>
-        <input type="text" id="plugId" placeholder="Entrer l'ID de la prise">
+        <label>Sélectionnez la prise :</label>
+        <select id="plugId" class="form-select">
+            <option value="">Chargement des prises...</option>
+        </select>
         
         <button class="btn-start" onclick="startCharge()">Démarrer la charge</button>
         <button class="btn-stop" onclick="stopCharge()">Arrêter & Payer</button>
@@ -204,6 +208,7 @@
                 
                 // On charge les infos et on connecte le websocket
                 loadProfile();
+                loadPlugs();
                 initWebSocket();
                 initPayPal(); // Initialisation du terminal de paiement
             } else {
@@ -244,6 +249,36 @@
             }
         } catch (error) {
             console.error("Erreur de récupération du profil:", error);
+        }
+    }
+
+    // --- 2b. CHARGER LA LISTE DES PRISES ---
+    async function loadPlugs() {
+        const token = localStorage.getItem('jwtToken');
+        try {
+            const response = await fetch(`${API_URL}/plugs`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const plugs = await response.json();
+                const select = document.getElementById('plugId');
+                
+                // On sauvegarde le choix actuel pour ne pas le perdre au rafraîchissement
+                const currentSelection = select.value;
+                
+                select.innerHTML = '<option value="">Sélectionnez une prise...</option>';
+                plugs.forEach(plug => {
+                    const option = document.createElement('option');
+                    option.value = plug.id;
+                    const statusText = plug.status === 'libre' ? 'Libre' : (plug.status === 'occupied' ? 'Occupée' : 'HS');
+                    option.textContent = `${plug.id} (${statusText})`;
+                    select.appendChild(option);
+                });
+                
+                if (currentSelection) select.value = currentSelection;
+            }
+        } catch (error) {
+            console.error("Erreur chargement prises:", error);
         }
     }
 
@@ -349,6 +384,21 @@
                 document.getElementById('plugPowerDisplay').innerText = `⚡ Puissance : ${data.power} W`;
             }
         });
+
+        // Met à jour la liste déroulante si une prise change de statut (ex: devient occupée par un autre)
+        socket.on('status_update', (data) => {
+            const select = document.getElementById('plugId');
+            const option = select.querySelector(`option[value="${data.plugId}"]`);
+            if (option) {
+                const statusText = data.status === 'libre' ? 'Libre' : (data.status === 'occupied' ? 'Occupée' : 'HS');
+                option.textContent = `${data.plugId} (${statusText})`;
+            }
+        });
+
+        // Recharge complètement la liste si on ajoute une nouvelle prise au réseau physiquement
+        socket.on('new_plug_added', () => {
+            loadPlugs();
+        });
     }
 
     // --- 5. DÉCONNEXION ---
@@ -364,6 +414,7 @@
         document.getElementById('loginView').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'block';
         loadProfile();
+        loadPlugs();
         initWebSocket();
         initPayPal();
     }
