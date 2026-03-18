@@ -12,9 +12,9 @@ router.post('/start', authMiddleware, plugController.scanAndStart);
 // POST /api/plugs/stop
 router.post('/stop', authMiddleware, plugController.stopCharge);
 
-// Route pour récupérer toutes les prises (Dashboard Admin)
-// GET /api/plugs - Maintenant protégée pour les admins
-router.get('/', authMiddleware, adminMiddleware, plugController.getAllPlugs);
+// Route pour récupérer toutes les prises (Publique pour les utilisateurs connectés)
+// GET /api/plugs
+router.get('/', authMiddleware, plugController.getAllPlugs);
 
 // Route pour ajouter une nouvelle prise (Admin)
 // POST /api/plugs
