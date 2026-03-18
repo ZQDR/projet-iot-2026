@@ -179,6 +179,56 @@ exports.deletePlug = async (req, res) => {
     }
 };
 
+// --- POUR L'ADMIN : BASCULER LE MODE MAINTENANCE ---
+exports.toggleMaintenance = async (req, res) => {
+    try {
+        const { plugId } = req.params;
+        const plug = await PlugModel.findById(plugId);
+        if (!plug) return res.status(404).json({ error: "Prise introuvable." });
+
+        if (plug.status !== 'hs') {
+            // 1. Vérifier s'il y a une session en cours pour l'arrêter
+            const [sessions] = await db.execute('SELECT * FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
+            if (sessions.length > 0) {
+                const session = sessions[0];
+                const userId = session.user_id;
+                
+                const currentIndex = parseFloat(plug.last_index) || 0;
+                const startIndex = parseFloat(session.index_start) || 0;
+                let realEnergyWh = Math.max(0, currentIndex - startIndex);
+                const energyKwh = realEnergyWh / 1000;
+                
+                let cost = Math.max(0.05, energyKwh * 0.50); // Minimum 5 centimes
+
+                const user = await UserModel.findById(userId);
+                const newBalance = parseFloat(user.balance) - cost;
+                
+                await UserModel.updateBalance(userId, newBalance);
+                await TransactionModel.create(userId, 'payment', -cost, `Arrêt forcé (Maintenance) sur ${plugId}`);
+                await ConsumptionModel.closeSession(session.id, energyKwh, cost);
+                
+                socketService.emit('user_data_updated', { userId: userId });
+            }
+
+            // 2. Mettre en maintenance et éteindre électriquement
+            await db.execute('UPDATE plugs SET status = "hs", state = 0 WHERE id = ?', [plugId]);
+            mqttService.turnOff(plugId);
+            socketService.emit('status_update', { plugId, status: 'hs' });
+            
+            res.json({ message: "Prise mise en maintenance." });
+        } else {
+            // Sortie de maintenance
+            await db.execute('UPDATE plugs SET status = "libre" WHERE id = ?', [plugId]);
+            socketService.emit('status_update', { plugId, status: 'libre' });
+            
+            res.json({ message: "Prise de nouveau libre." });
+        }
+    } catch (err) {
+        console.error("Erreur toggleMaintenance:", err);
+        res.status(500).json({ error: "Erreur lors du changement de maintenance." });
+    }
+};
+
 // --- POUR LA MAINTENANCE : ALERTES PROACTIVES ---
 exports.getMaintenanceAlerts = async (req, res) => {
     try {

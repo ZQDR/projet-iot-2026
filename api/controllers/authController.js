@@ -4,6 +4,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 require('dotenv').config();
+const db = require('../config/db');
+const mqttService = require('../services/mqttService');
+const socketService = require('../services/socketService');
 
 // INSCRIPTION
 exports.register = async (req, res) => {
@@ -132,8 +135,19 @@ exports.getProfile = async (req, res) => {
 // SUPPRESSION DE COMPTE (RGPD - Droit à l'oubli)
 exports.deleteAccount = async (req, res) => {
     try {
-        // req.user.id vient du token, l'utilisateur ne peut supprimer que SON compte
-        const success = await UserModel.delete(req.user.id);
+        const userId = req.user.id;
+
+        // --- FERMETURE DE LA PRISE SI UNE SESSION ÉTAIT EN COURS ---
+        const [activeSessions] = await db.execute('SELECT plug_id FROM consumption WHERE user_id = ? AND end_time IS NULL', [userId]);
+        for (const session of activeSessions) {
+            const plugId = session.plug_id;
+            mqttService.turnOff(plugId);
+            await db.execute('UPDATE plugs SET status = "libre" WHERE id = ?', [plugId]);
+            socketService.emit('status_update', { plugId, status: 'libre' });
+        }
+
+        // L'utilisateur ne peut supprimer que SON compte
+        const success = await UserModel.delete(userId);
 
         if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
 
@@ -148,6 +162,16 @@ exports.deleteAccount = async (req, res) => {
 exports.deleteUserById = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // --- FERMETURE DE LA PRISE SI UNE SESSION ÉTAIT EN COURS ---
+        const [activeSessions] = await db.execute('SELECT plug_id FROM consumption WHERE user_id = ? AND end_time IS NULL', [id]);
+        for (const session of activeSessions) {
+            const plugId = session.plug_id;
+            mqttService.turnOff(plugId);
+            await db.execute('UPDATE plugs SET status = "libre" WHERE id = ?', [plugId]);
+            socketService.emit('status_update', { plugId, status: 'libre' });
+        }
+
         const success = await UserModel.delete(id);
         if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
         res.json({ message: 'Utilisateur supprimé avec succès.' });

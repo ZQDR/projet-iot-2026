@@ -9,10 +9,33 @@ class UserManager {
             document.addEventListener("DOMContentLoaded", () => {
                 this.initDeleteButton();
                 this.initSearch();
+                this.initSocket();
             });
         } else {
             this.initDeleteButton();
             this.initSearch();
+            this.initSocket();
+        }
+    }
+
+    initSocket() {
+        if (typeof io !== 'undefined') {
+            const socketUrl = this.apiUrl.replace('/api', '');
+            this.socket = io(socketUrl, { path: "/api/socket.io" });
+            
+            // Mettre à jour le solde en direct dans la liste des utilisateurs
+            this.socket.on('live_consumption', (data) => {
+                const userRow = document.querySelector(`#userList li[data-id='${data.userId}']`);
+                if (userRow) {
+                    const balanceSpan = userRow.querySelector('.user-balance');
+                    if (balanceSpan && data.newBalance !== undefined) {
+                        // Petite animation visuelle de consommation
+                        balanceSpan.textContent = data.newBalance.toFixed(2);
+                        balanceSpan.style.color = "#e74c3c"; // Passe en rouge
+                        setTimeout(() => balanceSpan.style.color = "", 500); // Revient à la normale
+                    }
+                }
+            });
         }
     }
 
@@ -192,7 +215,7 @@ class UserManager {
         const li = document.createElement("li");
         li.dataset.id = id;
         li.dataset.username = username; // Pour le Graph
-        li.innerHTML = `<b>${username}</b> - Crédit: ${creditAmount}€`;
+        li.innerHTML = `<b>${username}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€`;
         
         li.addEventListener("click", () => {
             // Gestion de la sélection visuelle

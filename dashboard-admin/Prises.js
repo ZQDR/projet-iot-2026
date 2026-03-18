@@ -103,7 +103,7 @@ class PriseManager {
                 const rawStatus = row.dataset.status || "Inconnu";
                 
                 // Traduction propre pour l'affichage
-                const displayStatus = rawStatus === 'occupied' ? "Occupée" : (rawStatus === 'libre' ? "Libre" : rawStatus);
+                let displayStatus = rawStatus === 'occupied' ? "Occupée" : (rawStatus === 'libre' ? "Libre" : (rawStatus === 'hs' ? "🔴 Maintenance" : rawStatus));
                 
                 let displayText = `${displayStatus} (${textState})`;
 
@@ -117,6 +117,12 @@ class PriseManager {
                 // Changement de couleur dynamique
                 cellState.style.color = currentState ? "#27ae60" : "#7f8c8d";
                 cellState.style.fontWeight = currentState ? "bold" : "normal";
+
+                // Mise à jour de l'icône/texte du bouton maintenance
+                const btnMaint = row.querySelector(".btn-maint");
+                if (btnMaint) {
+                    btnMaint.textContent = rawStatus === 'hs' ? "✅ Rétablir" : "🔧 Maint.";
+                }
             }
         }
     }
@@ -175,6 +181,25 @@ class PriseManager {
         }
     }
 
+    async toggleMaintenance(plugId) {
+        if (!this.userManager.token) await this.userManager.loginAdmin();
+
+        try {
+            const response = await fetch(`${this.apiUrl}/plugs/${plugId}/maintenance`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${this.userManager.token}` }
+            });
+            if (response.ok) {
+                // L'UI est actualisée par le WebSocket, on peut juste laisser faire
+            } else {
+                const data = await response.json();
+                alert("Erreur : " + (data.error || "Impossible de changer le mode maintenance."));
+            }
+        } catch (error) {
+            console.error("Erreur maintenance :", error);
+        }
+    }
+
     async deletePrise(plugId) {
         if (!confirm(`Voulez-vous vraiment supprimer la prise ${plugId} ?`)) return;
 
@@ -229,7 +254,7 @@ class PriseManager {
             const tdEtat = document.createElement("td")
             tdEtat.className = "state-cell"; // Classe pour ciblage facile
             // On affiche le status (libre/occupied) et l'état électrique (ALLUMÉE/ÉTEINTE)
-            const displayStatus = prise.status === 'Libre' ? "Occupée" : (prise.status === 'libre' ? "Libre" : prise.status);
+            let displayStatus = prise.status === 'occupied' ? "Occupée" : (prise.status === 'libre' ? "Libre" : (prise.status === 'hs' ? "🔴 Maintenance" : prise.status));
             const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
             tdEtat.textContent = `${displayStatus} (${elecState})`;
             
@@ -263,6 +288,17 @@ class PriseManager {
                 }
             };
             tdAction.appendChild(btnQr);
+            
+            // Bouton de maintenance
+            const btnMaint = document.createElement("button");
+            btnMaint.textContent = prise.status === 'hs' ? "✅ Rétablir" : "🔧 Maint.";
+            btnMaint.className = "btn-maint"; 
+            btnMaint.style.marginLeft = "10px";
+            btnMaint.onclick = (e) => {
+                e.stopPropagation();
+                this.toggleMaintenance(prise.id);
+            };
+            tdAction.appendChild(btnMaint);
 
             tr.appendChild(tdNom)
             tr.appendChild(tdEtat)

@@ -9,6 +9,18 @@ class NotificationManager {
         if (this.tbody) {
             // On lance le polling (vérification périodique)
             this.initPolling();
+            // On lance l'écoute des WebSockets pour le temps réel
+            this.initSocket();
+        }
+    }
+
+    initSocket() {
+        if (typeof io !== 'undefined') {
+            const socketUrl = this.apiUrl.replace('/api', '');
+            this.socket = io(socketUrl, { path: "/api/socket.io" });
+            
+            // Dès qu'une prise passe en 'hs' (ou en 'libre'), on rafraîchit les alertes
+            this.socket.on('status_update', () => this.fetchAlerts());
         }
     }
 
