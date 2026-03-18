@@ -125,17 +125,57 @@ const mqttService = {
                         const [sessions] = await db.execute('SELECT id, user_id, index_start FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
                         if (sessions.length > 0) {
                             const activeSession = sessions[0];
+                            const userId = activeSession.user_id;
                             const indexStart = parseFloat(activeSession.index_start) || 0;
+                            
                             let currentEnergyWh = energyVal - indexStart;
                             if (currentEnergyWh < 0) currentEnergyWh = 0;
                             
-                            console.log(`🔌 [WS] Envoi live_consumption: User=${activeSession.user_id}, Wh=${currentEnergyWh}`);
-                            socketService.emit('live_consumption', {
-                                userId: activeSession.user_id,
-                                plugId: plugId,
-                                sessionId: activeSession.id,
-                                energyWh: currentEnergyWh
-                            });
+                            const energyKwh = currentEnergyWh / 1000;
+                            let currentCost = Math.max(0.05, energyKwh * 0.50); // Calcul du coût réel (minimum 5 centimes)
+
+                            // Récupération du solde initial de l'utilisateur
+                            const [users] = await db.execute('SELECT balance FROM users WHERE id = ?', [userId]);
+                            if (users.length > 0) {
+                                const initialBalance = parseFloat(users[0].balance);
+                                const currentBalance = initialBalance - currentCost;
+
+                                console.log(`🔌 [WS] Envoi live_consumption: User=${userId}, Wh=${currentEnergyWh}, Solde=${currentBalance.toFixed(2)}`);
+                                socketService.emit('live_consumption', {
+                                    userId: userId,
+                                    plugId: plugId,
+                                    sessionId: activeSession.id,
+                                    energyWh: currentEnergyWh,
+                                    cost: currentCost,
+                                    newBalance: currentBalance
+                                });
+
+                                // --- VÉRIFICATION DU SOLDE (AUTO-STOP) ---
+                                if (currentBalance <= 0) {
+                                    console.log(`🛑 Solde épuisé pour user ${userId}. Arrêt automatique de la prise ${plugId}.`);
+
+                                    // 1. Mise à jour en BDD (Transactions, Utilisateurs, Conso)
+                                    await db.execute('UPDATE users SET balance = ? WHERE id = ?', [currentBalance, userId]);
+                                    await db.execute('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'payment', -currentCost, `Coupure auto sur ${plugId} (Solde épuisé)`]);
+                                    await db.execute('UPDATE consumption SET end_time = NOW(), energy_kwh = ?, cost = ? WHERE id = ?', [energyKwh, currentCost, activeSession.id]);
+
+                                    // 2. Extinction physique
+                                    await db.execute('UPDATE plugs SET status = "libre", state = 0 WHERE id = ?', [plugId]);
+                                    mqttService.turnOff(plugId);
+
+                                    // 3. Notification générale (Dashboard Admin & Client)
+                                    socketService.emit('status_update', { plugId: plugId, status: 'libre' });
+                                    socketService.emit('user_data_updated', { userId: userId });
+                                    
+                                    // 4. Notification ciblée pour afficher la Popup chez l'utilisateur
+                                    socketService.emit('session_auto_stopped', {
+                                        userId: userId,
+                                        plugId: plugId,
+                                        reason: 'solde_epuise',
+                                        message: "Votre solde est épuisé. La session a été arrêtée automatiquement."
+                                    });
+                                }
+                            }
                         }
                     } catch (err) {
                         console.error("Erreur calcul conso:", err);

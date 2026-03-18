@@ -170,6 +170,7 @@
     const API_URL = 'https://recharge.cielnewton.fr/api';
     const SOCKET_URL = 'https://recharge.cielnewton.fr';
     let socket = null;
+    let myUserId = null; // Variable pour stocker l'ID de l'utilisateur courant
 
     // Mise à jour automatique du solde après un paiement PayPal réussi
     document.addEventListener('balanceUpdated', (e) => {
@@ -242,6 +243,7 @@
             const data = await response.json();
             
             if (response.ok) {
+                myUserId = data.id; // On sauvegarde l'ID de l'utilisateur
                 document.getElementById('userName').innerText = data.username;
                 document.getElementById('userBalance').innerText = Number(data.balance).toFixed(2);
             } else {
@@ -408,6 +410,32 @@
                 
                 // Griser si elle devient HS en direct
                 option.disabled = (data.status === 'hs');
+            }
+        });
+        
+        // Écoute de l'arrêt automatique pour solde épuisé
+        socket.on('session_auto_stopped', (data) => {
+            // On vérifie que cette alerte nous est bien destinée
+            if (data.userId == myUserId) {
+                // 1. On affiche l'alerte
+                Swal.fire({
+                    title: 'Session Interrompue 🔌',
+                    text: data.message || "Votre solde est épuisé. La prise a été coupée automatiquement.",
+                    icon: 'warning',
+                    confirmButtonText: 'Recharger mon compte',
+                    confirmButtonColor: '#3498db',
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // 2. Action au clic : rediriger vers la zone de paiement PayPal
+                        const rechargeSection = document.querySelector(".card");
+                        if (rechargeSection) {
+                            rechargeSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }
+                });
+                loadProfile(); // Force l'actualisation du solde à l'écran
+                resetDisplays(); // Remet les statuts à zéro (puissance à 0)
             }
         });
 

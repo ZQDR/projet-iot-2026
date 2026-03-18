@@ -190,21 +190,34 @@ class PriseManager {
     }
 
     async toggleMaintenance(plugId) {
-        if (!this.userManager.token) await this.userManager.loginAdmin();
+        if (!this.userManager.token) {
+            const logged = await this.userManager.loginAdmin();
+            if (!logged) return;
+        }
 
         try {
+            // Ajout d'un visuel de chargement pendant la requête
+            Swal.fire({
+                title: 'Changement d\'état...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
             const response = await fetch(`${this.apiUrl}/plugs/${plugId}/maintenance`, {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${this.userManager.token}` }
             });
+
             if (response.ok) {
-                // L'UI est actualisée par le WebSocket, on peut juste laisser faire
+                Swal.close(); // Succès : l'UI sera mise à jour via le WebSocket
             } else {
-                const data = await response.json();
-                Swal.fire('Erreur', data.error || "Impossible de changer le mode maintenance.", 'error');
+                // Sécurisation : si la réponse n'est pas du JSON (ex: erreur 404)
+                const data = await response.json().catch(() => ({})); 
+                Swal.fire('Erreur', data.error || `Erreur serveur (${response.status}). La route API existe-t-elle ?`, 'error');
             }
         } catch (error) {
             console.error("Erreur maintenance :", error);
+            Swal.fire('Erreur réseau', "Impossible de joindre le serveur.", 'error');
         }
     }
 
