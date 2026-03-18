@@ -150,7 +150,7 @@
 
     <div class="form-group">
         <label>Sélectionnez la prise :</label>
-        <select id="plugId" class="form-select">
+        <select id="plugId" class="form-select" onchange="resetDisplays()">
             <option value="">Chargement des prises...</option>
         </select>
         
@@ -255,13 +255,13 @@
     // --- 2b. CHARGER LA LISTE DES PRISES ---
     async function loadPlugs() {
         const token = localStorage.getItem('jwtToken');
+        const select = document.getElementById('plugId');
         try {
             const response = await fetch(`${API_URL}/plugs`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
                 const plugs = await response.json();
-                const select = document.getElementById('plugId');
                 
                 // On sauvegarde le choix actuel pour ne pas le perdre au rafraîchissement
                 const currentSelection = select.value;
@@ -272,14 +272,27 @@
                     option.value = plug.id;
                     const statusText = plug.status === 'libre' ? 'Libre' : (plug.status === 'occupied' ? 'Occupée' : 'HS');
                     option.textContent = `${plug.id} (${statusText})`;
+
+                    // On grise l'option si la prise est HS
+                    if (plug.status === 'hs') option.disabled = true;
+
                     select.appendChild(option);
                 });
                 
                 if (currentSelection) select.value = currentSelection;
+            } else {
+                select.innerHTML = '<option value="">⚠️ Erreur API (Vérifier les droits du routeur)</option>';
             }
         } catch (error) {
             console.error("Erreur chargement prises:", error);
+            select.innerHTML = '<option value="">⚠️ Serveur inaccessible</option>';
         }
+    }
+
+    // --- 2c. RÉINITIALISER L'AFFICHAGE AU CHANGEMENT DE PRISE ---
+    function resetDisplays() {
+        document.getElementById('plugStateDisplay').innerText = `📡 Statut de la prise : En attente...`;
+        document.getElementById('plugPowerDisplay').innerText = `⚡ Puissance : ...`;
     }
 
     // --- 3. DÉMARRER / ARRÊTER LA CHARGE ---
@@ -392,6 +405,9 @@
             if (option) {
                 const statusText = data.status === 'libre' ? 'Libre' : (data.status === 'occupied' ? 'Occupée' : 'HS');
                 option.textContent = `${data.plugId} (${statusText})`;
+                
+                // Griser si elle devient HS en direct
+                option.disabled = (data.status === 'hs');
             }
         });
 
