@@ -319,6 +319,60 @@ class PriseManager {
         }
     }
 
+    async openSettings(plugId) {
+        if (!this.userManager.token) await this.userManager.loginAdmin();
+
+        Swal.fire({
+            title: `Paramètres - ${plugId}`,
+            html: `
+                <div style="text-align: left; margin-top: 15px;">
+                    <label for="power-limit"><b>Limite de sécurité (Watts) :</b></label>
+                    <input type="number" id="power-limit" class="swal2-input" placeholder="Ex: 2500" style="margin-top:5px; width: 90%;">
+                    <small style="color: #7f8c8d; display: block; margin-top: 5px;">La prise se coupera automatiquement si un appareil dépasse cette puissance.</small>
+                </div>
+                <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <button id="btn-reboot-plug" style="width: 100%; background-color:#e67e22; border:none; padding:12px; color:white; font-weight:bold; border-radius:5px; cursor:pointer;">🔄 Redémarrer physiquement la prise</button>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '💾 Sauvegarder',
+            cancelButtonText: 'Annuler',
+            didOpen: () => {
+                document.getElementById('btn-reboot-plug').addEventListener('click', async () => {
+                    const conf = await Swal.fire({
+                        title: 'Redémarrer ?',
+                        text: 'La prise va se couper et redémarrer (15 secondes).',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e67e22',
+                        confirmButtonText: 'Oui, redémarrer'
+                    });
+                    if (conf.isConfirmed) {
+                        try {
+                            await fetch(`${this.apiUrl}/plugs/${plugId}/reboot`, { method: 'POST', headers: { "Authorization": `Bearer ${this.userManager.token}` } });
+                            Swal.fire('Succès', 'Ordre de redémarrage envoyé.', 'success');
+                        } catch(e) { Swal.fire('Erreur', 'Erreur réseau.', 'error'); }
+                    }
+                });
+            },
+            preConfirm: () => {
+                return document.getElementById('power-limit').value;
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed && result.value) {
+                try {
+                    const response = await fetch(`${this.apiUrl}/plugs/${plugId}/configure`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.userManager.token}` },
+                        body: JSON.stringify({ powerLimit: result.value })
+                    });
+                    if (response.ok) Swal.fire('Succès', 'Limite de puissance enregistrée !', 'success');
+                    else Swal.fire('Erreur', 'Impossible de modifier la prise.', 'error');
+                } catch (e) { Swal.fire('Erreur', 'Erreur réseau.', 'error'); }
+            }
+        });
+    }
+
     render() {
         this.tableBody.innerHTML = ""
 
@@ -412,6 +466,17 @@ class PriseManager {
                 this.forceStop(prise.id);
             };
             tdAction.appendChild(btnStop);
+            
+            // Bouton de Paramètres
+            const btnSettings = document.createElement("button");
+            btnSettings.textContent = "⚙️ Paramètres";
+            btnSettings.className = "btn-settings";
+            btnSettings.style.marginLeft = "10px";
+            btnSettings.onclick = (e) => {
+                e.stopPropagation();
+                this.openSettings(prise.id);
+            };
+            tdAction.appendChild(btnSettings);
 
             tr.appendChild(tdNom)
             tr.appendChild(tdEtat)

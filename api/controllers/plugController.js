@@ -316,3 +316,37 @@ exports.getMaintenanceAlerts = async (req, res) => {
         res.status(500).json({ error: "Erreur lors de l'analyse du réseau." });
     }
 };
+
+// --- POUR L'ADMIN : CONFIGURER LA PRISE (PUISSANCE MAX) ---
+exports.configurePlug = async (req, res) => {
+    try {
+        const { plugId } = req.params;
+        const { powerLimit } = req.body;
+        const plug = await PlugModel.findById(plugId);
+        if (!plug) return res.status(404).json({ error: "Prise introuvable." });
+
+        if (powerLimit !== undefined && !isNaN(powerLimit)) {
+            mqttService.sendRPC(plugId, "Switch.SetConfig", {
+                id: 0,
+                config: { power_limit: parseInt(powerLimit) }
+            });
+        }
+        
+        res.json({ message: "Configuration envoyée à la prise." });
+    } catch (err) {
+        console.error("Erreur configurePlug:", err);
+        res.status(500).json({ error: "Erreur lors de la configuration." });
+    }
+};
+
+// --- POUR L'ADMIN : REDÉMARRER PHYSIQUEMENT LA PRISE ---
+exports.rebootPlug = async (req, res) => {
+    try {
+        const { plugId } = req.params;
+        mqttService.sendRPC(plugId, "Shelly.Reboot");
+        res.json({ message: "Ordre de redémarrage envoyé à la prise." });
+    } catch (err) {
+        console.error("Erreur rebootPlug:", err);
+        res.status(500).json({ error: "Erreur lors du redémarrage." });
+    }
+};

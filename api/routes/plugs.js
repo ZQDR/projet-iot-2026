@@ -36,6 +36,14 @@ router.post('/:plugId/maintenance', authMiddleware, adminMiddleware, plugControl
 // POST /api/plugs/:plugId/force-stop
 router.post('/:plugId/force-stop', authMiddleware, adminMiddleware, plugController.forceStopCharge);
 
+// Route pour configurer la prise (puissance max) (Admin)
+// POST /api/plugs/:plugId/configure
+router.post('/:plugId/configure', authMiddleware, adminMiddleware, plugController.configurePlug);
+
+// Route pour redémarrer physiquement la prise (Admin)
+// POST /api/plugs/:plugId/reboot
+router.post('/:plugId/reboot', authMiddleware, adminMiddleware, plugController.rebootPlug);
+
 // Route pour générer le QR code d'une prise (publique/administrative)
 // GET /api/plugs/S1-01/qrcode
 router.get('/:plugId/qrcode', plugController.generateQrCode);

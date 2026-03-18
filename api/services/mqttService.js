@@ -231,6 +231,23 @@ sendCommand: (plugId, action) => {
         }
     },
 
+    // --- NOUVEAU : Envoi de commandes RPC (Remote Procedure Call) pour configurer la prise ---
+    sendRPC: (plugId, method, params = {}) => {
+        if (client && client.connected) {
+            const topic = `Shellies/${plugId}/rpc`;
+            const payload = JSON.stringify({
+                id: Math.floor(Math.random() * 10000), // ID de transaction aléatoire requis par Shelly
+                src: "dashboard-admin",
+                method: method,
+                params: params
+            });
+            client.publish(topic, payload);
+            console.log(`📤 Commande RPC envoyée : ${payload} -> ${topic}`);
+        } else {
+            console.error("⚠️ Impossible d'envoyer la commande RPC : Client MQTT déconnecté.");
+        }
+    },
+
     // Fonction pour éteindre toutes les prises marquées comme "libre"
     turnOffUnusedPlugs: async () => {
         try {
