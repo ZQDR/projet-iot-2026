@@ -14,6 +14,19 @@ class PriseManager {
 
     init() {
 
+        // --- NOUVEAU BOUTON : PROVISIONNEMENT LOCAL ---
+        if (this.btnAddPrise && this.btnAddPrise.parentNode) {
+            const btnProvision = document.createElement("button");
+            btnProvision.textContent = "🚀 Config. Initiale (Local)";
+            btnProvision.className = "btn-primary";
+            btnProvision.style.marginLeft = "10px";
+            btnProvision.style.backgroundColor = "#8e44ad"; // Couleur violette pour le différencier
+            btnProvision.style.border = "none";
+            
+            this.btnAddPrise.parentNode.insertBefore(btnProvision, this.btnAddPrise.nextSibling);
+            btnProvision.addEventListener("click", () => this.provisionLocalPlug());
+        }
+
         this.btnAddPrise.addEventListener("click", async () => {
             const { value: nom } = await Swal.fire({
                 title: 'Ajouter une prise',
@@ -83,6 +96,82 @@ class PriseManager {
             });
         } else {
             console.warn("Socket.io non chargé. Le temps réel est désactivé.");
+        }
+    }
+
+    // --- NOUVELLE FONCTION : PROVISIONNEMENT LOCAL ---
+    async provisionLocalPlug() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Provisionnement Prise Neuve',
+            width: '600px',
+            html: `
+                <div style="text-align: left; font-size: 0.9em;">
+                    <div style="background-color: #fdf2e9; padding: 10px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #e67e22;">
+                        <span style="color:#d35400; font-weight:bold;">⚠️ ÉTAPE 1 :</span><br>
+                        Connectez le Wi-Fi de cet ordinateur au réseau de la prise (ex: <i>ShellyPlusPlugS-XXXX</i>). Laissez ce tableau de bord ouvert.
+                    </div>
+                    
+                    <h4 style="margin: 0 0 10px 0;">1. Réseau Wi-Fi du Lycée</h4>
+                    <input id="swal-wifi-ssid" class="swal2-input" style="width: 85%; margin-top: 5px;" placeholder="Nom du Wi-Fi (SSID)">
+                    <input id="swal-wifi-pass" type="password" class="swal2-input" style="width: 85%; margin-top: 5px;" placeholder="Mot de passe Wi-Fi">
+                    
+                    <h4 style="margin: 15px 0 10px 0;">2. Serveur MQTT</h4>
+                    <input id="swal-mqtt-server" class="swal2-input" style="width: 85%; margin-top: 5px;" placeholder="Serveur (ex: broker.hivemq.com:1883)">
+                    <input id="swal-mqtt-user" class="swal2-input" style="width: 85%; margin-top: 5px;" placeholder="Utilisateur (Optionnel)">
+                    <input id="swal-mqtt-pass" type="password" class="swal2-input" style="width: 85%; margin-top: 5px;" placeholder="Mot de passe (Optionnel)">
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '🚀 Envoyer à la prise',
+            cancelButtonText: 'Annuler',
+            preConfirm: () => {
+                const wifiSsid = document.getElementById('swal-wifi-ssid').value;
+                const mqttServer = document.getElementById('swal-mqtt-server').value;
+                if (!wifiSsid || !mqttServer) {
+                    Swal.showValidationMessage('Le nom du Wi-Fi et le serveur MQTT sont obligatoires.');
+                    return false;
+                }
+                return {
+                    wifiSsid,
+                    wifiPass: document.getElementById('swal-wifi-pass').value,
+                    mqttServer,
+                    mqttUser: document.getElementById('swal-mqtt-user').value,
+                    mqttPass: document.getElementById('swal-mqtt-pass').value
+                };
+            }
+        });
+
+        if (formValues) {
+            try {
+                Swal.fire({ title: 'Configuration en cours...', text: 'Envoi des données vers 192.168.33.1...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                // 1. Envoi configuration MQTT (On le fait en premier avant que le Wi-Fi ne coupe la connexion)
+                await fetch('http://192.168.33.1/rpc/Mqtt.SetConfig', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        config: { server: formValues.mqttServer, user: formValues.mqttUser, pass: formValues.mqttPass, enable: true }
+                    })
+                });
+
+                // 2. Envoi configuration Wi-Fi
+                // On n'attend pas la réponse finale (await) car la prise va redémarrer son antenne Wi-Fi et couper notre connexion
+                fetch('http://192.168.33.1/rpc/Wifi.SetConfig', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        config: { sta1: { ssid: formValues.wifiSsid, pass: formValues.wifiPass, enable: true } }
+                    })
+                }).catch(() => {}); 
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Configuration envoyée !',
+                    text: "La prise va redémarrer. Veuillez reconnecter votre ordinateur au Wi-Fi habituel. Dès que la prise aura accès à Internet, elle apparaîtra toute seule dans cette liste !"
+                });
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Erreur de connexion', 'Impossible de contacter la prise. Êtes-vous bien connecté au réseau "ShellyPlusPlugS-..." ?', 'error');
+            }
         }
     }
 
