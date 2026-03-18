@@ -230,14 +230,28 @@ class UserManager {
         const li = document.createElement("li");
         li.dataset.id = id;
         li.dataset.username = username; // Pour le Graph
-        li.innerHTML = `<b>${username}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€`;
+        
+        // Structure flexbox pour aligner le bouton d'info à droite
+        li.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span><b>${username}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€</span>
+                <button class="btn-info-user" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0; margin-left: 10px;" title="Voir les infos de l'utilisateur">ℹ️</button>
+            </div>
+        `;
         
         // Maintenir la sélection visuelle lors du rechargement en temps réel
         if (this.selectedUserId == id) {
             li.style.backgroundColor = "#d0eaff";
         }
 
-        li.addEventListener("click", () => {
+        li.addEventListener("click", (e) => {
+            // Si on a cliqué sur le bouton info, on affiche la popup et on empêche la sélection de la ligne
+            if (e.target.closest('.btn-info-user')) {
+                e.stopPropagation();
+                this.showUserDetails(id);
+                return;
+            }
+
             // Gestion de la sélection visuelle
             document.querySelectorAll("#userList li").forEach(el => el.style.backgroundColor = "");
             li.style.backgroundColor = "#d0eaff";
@@ -245,6 +259,79 @@ class UserManager {
         });
 
         userList.appendChild(li);
+    }
+
+    // Affiche une popup avec toutes les infos de l'utilisateur
+    async showUserDetails(userId) {
+        if (!this.token) await this.loginAdmin();
+        try {
+            Swal.fire({ title: 'Chargement des informations...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            // On réutilise la route history qui renvoie maintenant aussi le profil et les transactions !
+            const response = await fetch(`${this.apiUrl}/auth/users/${userId}/history`, {
+                headers: { "Authorization": `Bearer ${this.token}` }
+            });
+
+            if (!response.ok) throw new Error("Erreur de récupération");
+            
+            const data = await response.json();
+            const user = data.user;
+            const transactions = data.transactions || [];
+
+            const dateInscr = new Date(user.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            let trHtml = transactions.map(tx => {
+                const dateTx = new Date(tx.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const color = tx.amount >= 0 ? '#27ae60' : '#e74c3c';
+                const sign = tx.amount > 0 ? '+' : '';
+                return `
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em;">${dateTx}</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em;">${tx.description || tx.type}</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em; color: ${color}; font-weight: bold;">${sign}${parseFloat(tx.amount).toFixed(2)}€</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (transactions.length === 0) {
+                trHtml = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #7f8c8d;">Aucune transaction récente</td></tr>`;
+            }
+
+            Swal.fire({
+                title: `Profil de ${user.username}`,
+                html: `
+                    <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.95em;">
+                        <p style="margin: 5px 0;">📧 <b>Email:</b> ${user.email}</p>
+                        <p style="margin: 5px 0;">💰 <b>Solde actuel:</b> <span style="color:#2980b9; font-weight:bold;">${parseFloat(user.balance).toFixed(2)}€</span></p>
+                        <p style="margin: 5px 0;">📅 <b>Inscrit le:</b> ${dateInscr}</p>
+                        <p style="margin: 5px 0; color: #7f8c8d;" title="${user.password}">🔑 <b>Mot de passe:</b> Hashé et sécurisé en BDD (Survolez pour voir le hash)</p>
+                    </div>
+                    <h4 style="margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #3498db; display: inline-block;">Dernières Transactions</h4>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead style="background: #ecf0f1; position: sticky; top: 0;">
+                                <tr>
+                                    <th style="padding: 5px;">Date</th>
+                                    <th style="padding: 5px;">Description</th>
+                                    <th style="padding: 5px;">Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${trHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `,
+                width: '600px',
+                showConfirmButton: true,
+                confirmButtonText: 'Fermer',
+                confirmButtonColor: '#3498db'
+            });
+
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Erreur', 'Impossible de charger les informations de l\'utilisateur.', 'error');
+        }
     }
 
     attachToForm(btnId) {

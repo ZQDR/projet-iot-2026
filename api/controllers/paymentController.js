@@ -14,6 +14,12 @@ exports.createPayPalOrder = async (req, res) => {
             return res.status(400).json({ error: "Montant invalide ou manquant dans la requête. Attendu : { 'amount': '10.00' }" });
         }
 
+        // Vérification de la limite de 100€
+        const user = await UserModel.findById(req.user.id);
+        if (parseFloat(user.balance) + parseFloat(amount) > 100) {
+            return res.status(400).json({ error: "Le solde maximum autorisé est de 100€. Vous ne pouvez pas recharger ce montant." });
+        }
+
         // On prépare la demande à PayPal
         const request = paypalService.createOrderRequest(amount);
         const order = await paypalService.client.execute(request);
@@ -95,6 +101,12 @@ exports.createStripeSession = async (req, res) => {
         const { amount } = req.body;
         if (!amount || isNaN(amount) || amount <= 0) {
             return res.status(400).json({ error: "Montant invalide." });
+        }
+
+        // Vérification de la limite de 100€
+        const user = await UserModel.findById(req.user.id);
+        if (parseFloat(user.balance) + parseFloat(amount) > 100) {
+            return res.status(400).json({ error: "Le solde maximum autorisé est de 100€. Vous ne pouvez pas recharger ce montant." });
         }
 
         // On demande à Stripe de créer une page de paiement temporaire

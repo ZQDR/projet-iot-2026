@@ -80,7 +80,7 @@ exports.stopCharge = async (req, res) => {
 
         // 2. Paiement
         const user = await UserModel.findById(userId);
-        const newBalance = parseFloat(user.balance) - cost;
+        const newBalance = Math.max(0, parseFloat(user.balance) - cost);
         await UserModel.updateBalance(userId, newBalance);
 
         // 3. Création de la transaction (en négatif)
@@ -215,7 +215,7 @@ exports.forceStopCharge = async (req, res) => {
             let cost = Math.max(0.05, energyKwh * 0.50); // Minimum 5 centimes
 
             const user = await UserModel.findById(userId);
-            const newBalance = parseFloat(user.balance) - cost;
+            const newBalance = Math.max(0, parseFloat(user.balance) - cost);
 
             await UserModel.updateBalance(userId, newBalance);
             await TransactionModel.create(userId, 'payment', -cost, `Arrêt forcé (Admin) sur ${plugId}`);
@@ -264,7 +264,7 @@ exports.toggleMaintenance = async (req, res) => {
                 let cost = Math.max(0.05, energyKwh * 0.50); // Minimum 5 centimes
 
                 const user = await UserModel.findById(userId);
-                const newBalance = parseFloat(user.balance) - cost;
+                const newBalance = Math.max(0, parseFloat(user.balance) - cost);
                 
                 await UserModel.updateBalance(userId, newBalance);
                 await TransactionModel.create(userId, 'payment', -cost, `Arrêt forcé (Maintenance) sur ${plugId}`);

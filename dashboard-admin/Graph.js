@@ -97,7 +97,9 @@ class ConsumptionGraph{
                 return;
             }
 
-            const data=await response.json();
+            const responseData=await response.json();
+            // L'API renvoie maintenant { history: [], transactions: [], user: {} }
+            const data = responseData.history !== undefined ? responseData.history : responseData;
 
             // Transformation des données (Array d'objets SQL -> Arrays pour Chart.js)
             // On suppose que data est un tableau : [{ start_time: "...", energy_kwh: 0.5 }, ...]

@@ -139,7 +139,7 @@ const mqttService = {
                             if (users.length > 0) {
                                 const initialBalance = parseFloat(users[0].balance);
                                 const username = users[0].username;
-                                const currentBalance = initialBalance - currentCost;
+                                let currentBalance = initialBalance - currentCost;
 
                                 console.log(`🔌 [WS] Envoi live_consumption: User=${userId}, Wh=${currentEnergyWh}, Solde=${currentBalance.toFixed(2)}`);
                                 socketService.emit('live_consumption', {
@@ -155,6 +155,8 @@ const mqttService = {
                                 // --- VÉRIFICATION DU SOLDE (AUTO-STOP) ---
                                 if (currentBalance <= 0) {
                                     console.log(`🛑 Solde épuisé pour user ${userId}. Arrêt automatique de la prise ${plugId}.`);
+
+                                    currentBalance = 0; // On fige le solde à 0€ pour éviter le négatif
 
                                     // 1. Mise à jour en BDD (Transactions, Utilisateurs, Conso)
                                     await db.execute('UPDATE users SET balance = ? WHERE id = ?', [currentBalance, userId]);

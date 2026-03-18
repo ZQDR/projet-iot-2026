@@ -19,6 +19,10 @@ exports.register = async (req, res) => {
             return res.status(400).json({ error: 'Tous les champs sont obligatoires.' });
         }
 
+        if (balance < 0 || balance > 100) {
+            return res.status(400).json({ error: 'Le solde doit être compris entre 0€ et 100€.' });
+        }
+
         // Vérifier si l'email existe déjà
         const existingUser = await UserModel.findByEmail(email);
         if (existingUser) {
@@ -100,22 +104,33 @@ exports.getUserHistory = async (req, res) => {
         const targetId = req.params.id; // L'ID dont on veut voir l'historique
         const requesterId = req.user.id; // L'ID de celui qui demande (via Token)
 
-        // 1. Si l'utilisateur demande son propre historique, c'est OK
-        // (On utilise '==' pour gérer la différence string/number)
+        let isAllowed = false;
+        
         if (requesterId == targetId) {
-            const history = await UserModel.getHistory(targetId);
-            return res.json(history);
+            isAllowed = true;
+        } else {
+            const requester = await UserModel.findById(requesterId);
+            if (requester && requester.role === 'admin') isAllowed = true;
         }
 
-        // 2. Si c'est un ID différent, on vérifie si le demandeur est ADMIN
-        const requester = await UserModel.findById(requesterId);
-        if (requester && requester.role === 'admin') {
-            const history = await UserModel.getHistory(targetId);
-            return res.json(history);
-        }
+        if (!isAllowed) return res.status(403).json({ error: "Accès interdit à cet historique." });
 
-        // 3. Sinon, c'est interdit
-        return res.status(403).json({ error: "Accès interdit à cet historique." });
+        // Récupération de toutes les infos pour l'Admin (Historique, Transactions, Profil)
+        const targetUser = await UserModel.findById(targetId);
+        const history = await UserModel.getHistory(targetId);
+        const [transactions] = await db.execute('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 15', [targetId]);
+
+        return res.json({
+            history: history,
+            transactions: transactions,
+            user: {
+                username: targetUser.username,
+                email: targetUser.email,
+                password: targetUser.password, // Le mot de passe est hashé en BDD
+                balance: targetUser.balance,
+                created_at: targetUser.created_at
+            }
+        });
 
     } catch (err) {
         console.error(err);
