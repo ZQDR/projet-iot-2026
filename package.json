@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "api-iot": "file:api",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "stripe": "^20.4.1"
   }
 }

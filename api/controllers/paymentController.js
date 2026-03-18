@@ -143,10 +143,18 @@ exports.verifyStripeSession = async (req, res) => {
 
             const amountFloat = session.amount_total / 100; // Centimes -> Euros
             const user = await UserModel.findById(userId);
+            
+            if (!user) return res.status(404).json({ error: "Utilisateur introuvable en base de données." });
+
             const newBalance = parseFloat(user.balance) + amountFloat;
 
             if (await UserModel.updateBalance(userId, newBalance)) {
-                await TransactionModel.create(userId, 'recharge', amountFloat, `Rechargement Stripe CB (${sessionId})`);
+                // Sécurisation : on enregistre l'historique sans bloquer le crédit si ça échoue
+                try {
+                    await TransactionModel.create(userId, 'recharge', amountFloat, `Rechargement Stripe CB (${sessionId})`);
+                } catch (txErr) {
+                    console.error("⚠️ Erreur log transaction Stripe :", txErr.message);
+                }
                 socketService.emit('user_data_updated', { userId: userId });
 
                 return res.json({ message: 'Paiement Stripe validé !', newBalance: newBalance.toFixed(2) });
@@ -156,6 +164,7 @@ exports.verifyStripeSession = async (req, res) => {
         res.status(400).json({ error: "Paiement non validé par la banque." });
     } catch (err) {
         console.error("Erreur Stripe Verify:", err);
-        res.status(500).json({ error: "Erreur serveur." });
+        // Renvoyer l'erreur exacte au front pour le débogage
+        res.status(500).json({ error: "Erreur serveur : " + err.message });
     }
 };

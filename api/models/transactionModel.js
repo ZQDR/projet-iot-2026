@@ -1,18 +1,18 @@
 const db = require('../config/db');
 
 class TransactionModel {
-    // Enregistre une transaction (positive pour recharge, négative pour consommation)
+    // Ajouter une ligne dans l'historique des transactions
     static async create(userId, type, amount, description) {
-        const sql = 'INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, NOW())';
-        const [result] = await db.execute(sql, [userId, type, amount, description]);
-        return result.insertId;
-    }
-
-    // Récupère l'historique financier d'un utilisateur
-    static async getByUserId(userId) {
-        const sql = 'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC';
-        const [rows] = await db.execute(sql, [userId]);
-        return rows;
+        try {
+            const [result] = await db.execute(
+                'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+                [userId, type, amount, description]
+            );
+            return result.insertId;
+        } catch (error) {
+            console.error("Erreur DB TransactionModel :", error);
+            throw error;
+        }
     }
 }
 
