@@ -293,7 +293,7 @@ class UserManager {
                     password, 
                     parseFloat(creditAmount)
                 );
-
+                
                 if (result.success) {
                     Swal.fire('Succès !', 'Utilisateur créé.', 'success');
                     // On utilise l'ID retourné par l'API (result.data.userId)
