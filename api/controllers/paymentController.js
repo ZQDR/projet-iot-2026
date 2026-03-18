@@ -7,7 +7,9 @@ exports.createPayPalOrder = async (req, res) => {
     try {
         const { amount } = req.body;
 
-        if (!amount || amount <= 0) return res.status(400).json({ error: "Montant invalide" });
+        if (!amount || isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ error: "Montant invalide ou manquant dans la requête. Attendu : { 'amount': '10.00' }" });
+        }
 
         // On prépare la demande à PayPal
         const request = paypalService.createOrderRequest(amount);
@@ -29,6 +31,11 @@ exports.capturePayPalOrder = async (req, res) => {
     try {
         const userId = req.user.id;
         const { orderId } = req.body; // L'ID que PayPal a donné
+
+        // VÉRIFICATION NOUVELLE : Si Mehdi oublie d'envoyer l'ID ou se trompe de nom de variable
+        if (!orderId) {
+            return res.status(400).json({ error: "ID de commande manquant. Le body doit contenir { 'orderId': 'ID_DE_PAYPAL' }." });
+        }
 
         // SÉCURITÉ : On demande directement à PayPal si l'argent est bien là
         const request = paypalService.captureOrderRequest(orderId);

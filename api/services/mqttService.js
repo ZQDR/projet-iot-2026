@@ -72,107 +72,86 @@ const mqttService = {
                 console.log(`📩 Message reçu sur [${topic}] : ${payload}`);
                 const type = topicParts[2];
 
-                // Si c'est un message de données (Gen 1: status/relay/power | Gen 2: events/status | autres: test)
-                if (['relay', 'power', 'emeter', 'status', 'events', 'test'].includes(type)) {
+                let currentPower = undefined;
+                let energyVal = undefined;
+                let ison = undefined;
+
+                // --- CAS A : Valeurs brutes (Gen 1) ---
+                const subTopic = topicParts[topicParts.length - 1];
+                if (subTopic === 'power') currentPower = parseFloat(payload);
+                else if (subTopic === 'energy') energyVal = parseFloat(payload) / 60; // Wmin -> Wh
+                else if (type === 'relay' && topicParts.length === 4) {
+                    if (payload === 'on') ison = true;
+                    if (payload === 'off') ison = false;
+                }
+
+                // --- CAS B : Valeurs JSON complexes (Gen 1 & Gen 2) ---
+                let plugData = null;
+                try { plugData = JSON.parse(payload); } catch (e) { /* Ne plante pas si ce n'est pas du JSON */ }
+                
+                if (plugData && typeof plugData === 'object') {
+                    // Normalisation Gen 2
+                    if (plugData.method === 'NotifyStatus' && plugData.params && plugData.params['switch:0']) {
+                        plugData = plugData.params['switch:0'];
+                    }
+
+                    if (plugData.power !== undefined) currentPower = plugData.power;
+                    else if (plugData.apower !== undefined) currentPower = plugData.apower;
+
+                    if (plugData.energy !== undefined) energyVal = plugData.energy / 60;
+                    else if (plugData.total !== undefined) energyVal = plugData.total;
+                    else if (plugData.total_wh !== undefined) energyVal = plugData.total_wh;
+                    else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) energyVal = plugData.aenergy.total;
+
+                    if (plugData.state !== undefined) ison = (plugData.state === 'on');
+                    else if (plugData.output !== undefined) ison = (plugData.output === true);
+                    else if (plugData.status !== undefined) ison = (plugData.status === 'on');
+
+                    if (plugData.voltage !== undefined) {
+                        await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [plugData.voltage, plugId]);
+                    }
+                }
+
+                // --- EMISSION DES DONNEES ---
+                if (currentPower !== undefined) {
+                    socketService.emit('power_update', { plugId, power: currentPower });
+                }
+
+                if (energyVal !== undefined) {
+                    console.log(`💾 [DEBUG BDD] Énergie lue : ${energyVal.toFixed(2)} Wh`);
+                    await db.execute('UPDATE plugs SET last_index = ? WHERE id = ?', [energyVal, plugId]);
+
                     try {
-                        const data = JSON.parse(payload);
-
-                        // Normalisation : Si c'est un événement RPC Shelly Gen 2 (topic: events/rpc)
-                        let plugData = data;
-                        if (data.method === 'NotifyStatus' && data.params && data.params['switch:0']) {
-                            plugData = data.params['switch:0'];
+                        const [sessions] = await db.execute('SELECT id, user_id, index_start FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
+                        if (sessions.length > 0) {
+                            const activeSession = sessions[0];
+                            const indexStart = parseFloat(activeSession.index_start) || 0;
+                            let currentEnergyWh = energyVal - indexStart;
+                            if (currentEnergyWh < 0) currentEnergyWh = 0;
+                            
+                            console.log(`🔌 [WS] Envoi live_consumption: User=${activeSession.user_id}, Wh=${currentEnergyWh}`);
+                            socketService.emit('live_consumption', {
+                                userId: activeSession.user_id,
+                                plugId: plugId,
+                                sessionId: activeSession.id,
+                                energyWh: currentEnergyWh
+                            });
                         }
+                    } catch (err) {
+                        console.error("Erreur calcul conso:", err);
+                    }
+                }
 
-                        // 1. Gestion Intelligente de l'Énergie et de la Puissance
-                        let currentPower = undefined;
-                        let energyVal = undefined;
+                if (ison !== undefined) {
+                    await db.execute('UPDATE plugs SET state = ? WHERE id = ?', [ison, plugId]);
+                    socketService.emit('state_update', { plugId, state: ison });
 
-                        // Cas A: La prise envoie une valeur brute (nombre) sur un sous-topic (ex: relay/0/energy)
-                        if (topicParts.length >= 5) {
-                            const subTopic = topicParts[topicParts.length - 1];
-                            if (subTopic === 'power') currentPower = parseFloat(payload);
-                            else if (subTopic === 'energy') energyVal = parseFloat(payload) / 60; // Wmin -> Wh
+                    if (ison) {
+                        const [statusRows] = await db.execute('SELECT status FROM plugs WHERE id = ?', [plugId]);
+                        if (statusRows.length > 0 && statusRows[0].status === 'libre') {
+                            console.log(`⚠️ Prise ${plugId} allumée mais libre -> Extinction forcée.`);
+                            mqttService.turnOff(plugId);
                         }
-
-                        // Cas B: La prise envoie un objet JSON global (status)
-                        if (typeof plugData === 'object' && plugData !== null) {
-                            if (plugData.power !== undefined) currentPower = plugData.power;
-                            else if (plugData.apower !== undefined) currentPower = plugData.apower; // Gen 2
-
-                            if (plugData.energy !== undefined) energyVal = plugData.energy / 60; // Gen 1 (Wmin)
-                            else if (plugData.total !== undefined) energyVal = plugData.total;
-                            else if (plugData.total_wh !== undefined) energyVal = plugData.total_wh;
-                            else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) {
-                                energyVal = plugData.aenergy.total; // Gen 2
-                            }
-                        }
-
-                        if (currentPower !== undefined) {
-                            socketService.emit('power_update', { plugId, power: currentPower });
-                        }
-
-                        if (energyVal !== undefined) {
-                            console.log(`💾 [DEBUG BDD] Mise à jour de last_index pour ${plugId} : ${energyVal} (Type: ${typeof energyVal})`);
-                            await db.execute('UPDATE plugs SET last_index = ? WHERE id = ?', [energyVal, plugId]);
-
-                            // --- NOUVEAU : Calcul de la conso en direct pour le Graph Admin ---
-                            try {
-                                const [sessions] = await db.execute('SELECT id, user_id, index_start FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
-                                if (sessions.length > 0) {
-                                    const activeSession = sessions[0];
-                                    const indexStart = parseFloat(activeSession.index_start) || 0;
-                                    let currentEnergyWh = energyVal - indexStart;
-                                    if (currentEnergyWh < 0) currentEnergyWh = 0;
-                                    
-                                    console.log(`🔌 [WS] Émission live_consumption: User=${activeSession.user_id}, Session=${activeSession.id}, Wh=${currentEnergyWh}`);
-
-                                    // On notifie le dashboard admin
-                                    socketService.emit('live_consumption', {
-                                        userId: activeSession.user_id,
-                                        plugId: plugId,
-                                        sessionId: activeSession.id,
-                                        energyWh: currentEnergyWh
-                                    });
-                                }
-                            } catch (err) {
-                                console.error("Erreur calcul conso temps réel MQTT:", err);
-                            }
-                        } else {
-                            console.log(`⚠️ [DEBUG BDD] Aucune donnée d'énergie trouvée dans ce message pour ${plugId}.`);
-                        }
-
-                        // 1.bis Gestion de la Tension (Pour la maintenance proactive)
-                        if (plugData.voltage !== undefined) {
-                            await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [plugData.voltage, plugId]);
-                        }
-
-                        // 2. Gestion de l'État ON/OFF (Gen 1 & Gen 2)
-                        let ison = undefined;
-                        if (plugData.state !== undefined) {
-                            ison = (plugData.state === 'on');
-                        } else if (plugData.output !== undefined) {
-                            ison = (plugData.output === true); // Support Shelly Gen 2
-                        } else if (plugData.status !== undefined) {
-                            ison = (plugData.status === 'on');
-                        }
-
-                        if (ison !== undefined) {
-                            await db.execute('UPDATE plugs SET state = ? WHERE id = ?', [ison, plugId]);
-
-                            // WEBSOCKET : On prévient le dashboard immédiatement
-                            socketService.emit('state_update', { plugId, state: ison });
-
-                            // SÉCURITÉ : Si la prise s'allume alors qu'elle est libre, on l'éteint immédiatement
-                            if (ison) {
-                                const [statusRows] = await db.execute('SELECT status FROM plugs WHERE id = ?', [plugId]);
-                                if (statusRows.length > 0 && statusRows[0].status === 'libre') {
-                                    console.log(`⚠️ Prise ${plugId} allumée mais libre -> Extinction forcée.`);
-                                    mqttService.turnOff(plugId);
-                                }
-                            }
-                        }
-                    } catch (jsonErr) {
-                        // Ce n'était pas du JSON valide, on ignore silencieusement
                     }
                 }
             } catch (globalErr) {
