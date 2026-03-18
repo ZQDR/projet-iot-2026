@@ -161,6 +161,8 @@
     <div class="status-box" id="realTimeStatus">
         <div id="plugStateDisplay">📡 Statut de la prise : En attente...</div>
         <div id="plugPowerDisplay">⚡ Puissance : 0 W</div>
+        <div id="plugEnergyDisplay">📈 Énergie : 0.0 Wh</div>
+        <div id="plugCostDisplay">💰 Coût de session : 0.00 €</div>
     </div>
 
     <button class="btn-logout" onclick="logout()">Déconnexion</button>
@@ -295,6 +297,10 @@
     function resetDisplays() {
         document.getElementById('plugStateDisplay').innerText = `📡 Statut de la prise : En attente...`;
         document.getElementById('plugPowerDisplay').innerText = `⚡ Puissance : ...`;
+        if(document.getElementById('plugEnergyDisplay')) {
+            document.getElementById('plugEnergyDisplay').innerText = `📈 Énergie : 0.0 Wh`;
+            document.getElementById('plugCostDisplay').innerText = `💰 Coût de session : 0.00 €`;
+        }
     }
 
     // --- 3. DÉMARRER / ARRÊTER LA CHARGE ---
@@ -423,7 +429,10 @@
                 // Mise à jour de l'affichage de l'énergie si la bonne prise est sélectionnée
                 const currentPlug = document.getElementById('plugId').value;
                 if (data.plugId === currentPlug) {
-                    document.getElementById('plugPowerDisplay').innerText = `⚡ Énergie consommée : ${data.energyWh.toFixed(1)} Wh`;
+                    if(document.getElementById('plugEnergyDisplay')) {
+                        document.getElementById('plugEnergyDisplay').innerText = `📈 Énergie : ${data.energyWh.toFixed(1)} Wh`;
+                        document.getElementById('plugCostDisplay').innerText = `💰 Coût de session : ${data.cost.toFixed(2)} €`;
+                    }
                 }
             }
         });
