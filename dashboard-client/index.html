@@ -67,6 +67,24 @@
         .btn-stop { background-color: var(--danger); margin-top: 10px; }
         .btn-logout { background-color: var(--dark); margin-top: 20px; font-size: 14px; }
         
+        /* Liste des sessions actives */
+        .active-session-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .active-session-item strong {
+            color: var(--primary);
+            font-size: 1.1em;
+        }
+        .active-session-item span {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
         /* Dashboard spécifique */
         .balance-container {
             background: var(--light);
@@ -152,6 +170,11 @@
     </button>
 </div>
 
+    <div class="card" id="activeSessionsCard" style="display: none; border-left: 4px solid var(--primary);">
+        <h3>⚡ Mes charges en cours</h3>
+        <div id="activeSessionsList"></div>
+    </div>
+
     <div class="form-group">
         <label>Sélectionnez la prise :</label>
         <select id="plugId" class="form-select" onchange="resetDisplays()">
@@ -159,7 +182,6 @@
         </select>
         
         <button class="btn-start" onclick="startCharge()">Démarrer la charge</button>
-        <button class="btn-stop" onclick="stopCharge()">Arrêter & Payer</button>
     </div>
 
     <div class="status-box" id="realTimeStatus">
@@ -177,6 +199,7 @@
     const SOCKET_URL = 'https://recharge.cielnewton.fr';
     let socket = null;
     let myUserId = null; // Variable pour stocker l'ID de l'utilisateur courant
+    let myUsername = null; // Variable pour stocker le nom de l'utilisateur
 
     // Mise à jour automatique du solde après un paiement PayPal réussi
     document.addEventListener('balanceUpdated', (e) => {
@@ -214,8 +237,8 @@
                 document.getElementById('dashboardView').style.display = 'block';
                 
                 // On charge les infos et on connecte le websocket
-                loadProfile();
-                loadPlugs();
+                await loadProfile();
+                await loadPlugs();
                 initWebSocket();
                 initPayPal(); // Initialisation du terminal de paiement
             } else {
@@ -250,6 +273,7 @@
             
             if (response.ok) {
                 myUserId = data.id; // On sauvegarde l'ID de l'utilisateur
+                myUsername = data.username;
                 document.getElementById('userName').innerText = data.username;
                 document.getElementById('userBalance').innerText = Number(data.balance).toFixed(2);
             } else {
@@ -275,6 +299,11 @@
                 const currentSelection = select.value;
                 
                 select.innerHTML = '<option value="">Sélectionnez une prise...</option>';
+                
+                const activeList = document.getElementById('activeSessionsList');
+                activeList.innerHTML = '';
+                let hasActive = false;
+
                 plugs.forEach(plug => {
                     const option = document.createElement('option');
                     option.value = plug.id;
@@ -285,9 +314,26 @@
                     if (plug.status === 'hs') option.disabled = true;
 
                     select.appendChild(option);
+
+                    // NOUVEAU : Ajouter les sessions actives de l'utilisateur dans l'encart
+                    if (plug.status === 'occupied' && plug.username === myUsername) {
+                        hasActive = true;
+                        const div = document.createElement('div');
+                        div.className = 'active-session-item';
+                        div.id = `active-session-${plug.id}`;
+                        div.innerHTML = `
+                            <strong>🔌 Prise ${plug.id}</strong>
+                            <span id="session-power-${plug.id}">⚡ Puissance : ${plug.power || 0} W</span>
+                            <span id="session-energy-${plug.id}">📈 Énergie : Calcul en cours...</span>
+                            <span id="session-cost-${plug.id}">💰 Coût : 0.00 €</span>
+                            <button class="btn-stop" onclick="stopSpecificCharge('${plug.id}')">🛑 Arrêter & Payer</button>
+                        `;
+                        activeList.appendChild(div);
+                    }
                 });
                 
                 if (currentSelection) select.value = currentSelection;
+                document.getElementById('activeSessionsCard').style.display = hasActive ? 'block' : 'none';
             } else {
                 select.innerHTML = '<option value="">⚠️ Erreur API (Vérifier les droits du routeur)</option>';
             }
@@ -308,8 +354,8 @@
     }
 
     // --- 3. DÉMARRER / ARRÊTER LA CHARGE ---
-    async function apiRequest(endpoint, method = 'POST') {
-        const plugId = document.getElementById('plugId').value;
+    async function apiRequest(endpoint, method = 'POST', targetPlugId = null) {
+        const plugId = targetPlugId || document.getElementById('plugId').value;
         if (!plugId) {
             Swal.fire('Attention', 'Veuillez sélectionner une prise.', 'warning');
             return null;
@@ -346,19 +392,14 @@
         const data = await apiRequest('start');
         if(data) {
             Swal.fire('Succès !', data.message || "Charge démarrée !", 'success');
-            // On pourrait ici changer l'UI pour montrer que ça charge
+            // Rafraîchir pour afficher la nouvelle session active
+            loadPlugs();
         }
     }
 
-    async function stopCharge() {
-        const plugId = document.getElementById('plugId').value;
-        if (!plugId) {
-            Swal.fire('Attention', 'Veuillez sélectionner une prise.', 'warning');
-            return;
-        }
-
+    async function stopSpecificCharge(targetPlugId) {
         const confirm = await Swal.fire({
-            title: 'Arrêter la charge ?',
+            title: `Arrêter la prise ${targetPlugId} ?`,
             text: "Votre session sera terminée et facturée.",
             icon: 'warning',
             showCancelButton: true,
@@ -369,14 +410,15 @@
 
         if (confirm.isConfirmed) {
             Swal.fire({ title: 'Arrêt en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            const data = await apiRequest('stop');
+            const data = await apiRequest('stop', 'POST', targetPlugId);
             if(data && data.cost !== undefined) {
                 Swal.fire({
                     title: 'Charge terminée 🛑',
-                    html: `💰 Coût : <b>${data.cost} €</b><br>⚡ Énergie : <b>${data.energy_kwh} kWh</b><br>� Nouveau solde : <b>${data.newBalance} €</b>`,
+                    html: `💰 Coût : <b>${data.cost}</b><br>⚡ Énergie : <b>${data.energy_kwh} kWh</b><br>💳 Nouveau solde : <b>${data.newBalance}</b>`,
                     icon: 'success'
                 });
                 loadProfile(); // Mise à jour de l'affichage du crédit
+                loadPlugs(); // Mise à jour de la liste des sessions
             }
         }
     }
@@ -495,6 +537,12 @@
             if (data.plugId === currentPlug) {
                 document.getElementById('plugPowerDisplay').innerText = `⚡ Puissance : ${data.power} W`;
             }
+
+            // NOUVEAU : Met à jour la liste des sessions actives
+            const sessionPower = document.getElementById(`session-power-${data.plugId}`);
+            if (sessionPower) {
+                sessionPower.innerText = `⚡ Puissance : ${data.power} W`;
+            }
         });
 
         // Met à jour la liste déroulante si une prise change de statut (ex: devient occupée par un autre)
@@ -507,6 +555,17 @@
                 
                 // Griser si elle devient HS en direct
                 option.disabled = (data.status === 'hs');
+
+                // Si la prise redevient libre, on la supprime de notre liste de sessions en cours
+                if (data.status === 'libre' || data.status === 'hs') {
+                    const activeItem = document.getElementById(`active-session-${data.plugId}`);
+                    if (activeItem) {
+                        activeItem.remove();
+                        if (document.getElementById('activeSessionsList').children.length === 0) {
+                            document.getElementById('activeSessionsCard').style.display = 'none';
+                        }
+                    }
+                }
             }
         });
 
@@ -524,6 +583,12 @@
                         document.getElementById('plugCostDisplay').innerText = `💰 Coût de session : ${data.cost.toFixed(2)} €`;
                     }
                 }
+                
+                // NOUVEAU : Met à jour la carte de session active spécifique
+                const sessionEnergy = document.getElementById(`session-energy-${data.plugId}`);
+                if (sessionEnergy) sessionEnergy.innerText = `📈 Énergie : ${data.energyWh.toFixed(1)} Wh`;
+                const sessionCost = document.getElementById(`session-cost-${data.plugId}`);
+                if (sessionCost) sessionCost.innerText = `💰 Coût : ${data.cost.toFixed(2)} €`;
             }
         });
 
@@ -557,6 +622,7 @@
                 });
                 loadProfile(); // Force l'actualisation du solde à l'écran
                 resetDisplays(); // Remet les statuts à zéro (puissance à 0)
+                loadPlugs(); // Vide la liste des sessions actives
             }
         });
 
@@ -578,11 +644,13 @@
     if (localStorage.getItem('jwtToken')) {
         document.getElementById('loginView').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'block';
-        loadProfile();
-        loadPlugs();
-        initWebSocket();
-        initPayPal();
-        checkStripeReturn(); // <--- NOUVEAU: Lance la vérification s'il revient d'un paiement
+        (async () => {
+            await loadProfile();
+            await loadPlugs();
+            initWebSocket();
+            initPayPal();
+            checkStripeReturn();
+        })();
     }
 </script>
 

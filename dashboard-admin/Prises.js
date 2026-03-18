@@ -53,7 +53,49 @@ class PriseManager {
             });
         }
 
+        // Gestion du clic sur le nom d'utilisateur pour le sélectionner dans la liste
+        if (this.tableBody) {
+            this.tableBody.addEventListener("click", (e) => {
+                if (e.target.classList.contains("clickable-username")) {
+                    e.stopPropagation(); // Évite de sélectionner la ligne de la prise
+                    const username = e.target.dataset.username;
+                    this.selectUserInDashboard(username);
+                }
+            });
+        }
+
         this.loadPrises()
+    }
+
+    // Fonction qui recherche l'utilisateur dans la liste et déclenche son graphique
+    selectUserInDashboard(username) {
+        const userItems = document.querySelectorAll("#userList li");
+        let found = false;
+        
+        for (let li of userItems) {
+            if (li.dataset.username === username) {
+                // Si l'utilisateur est masqué par une recherche, on réinitialise le champ de recherche
+                const searchInput = document.querySelector(".search-bar input");
+                if (searchInput && li.style.display === "none") {
+                    searchInput.value = "";
+                    this.userManager.applySearchFilter();
+                }
+
+                li.click(); // Déclenche le clic (qui charge le graph via UserManager)
+                li.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Fait défiler la liste jusqu'à lui
+                
+                // Petit effet visuel (flash jaune court) pour attirer l'oeil de l'admin
+                li.style.backgroundColor = "#ffeaa7";
+                setTimeout(() => { li.style.backgroundColor = "#d0eaff"; }, 500); // Revient au bleu "sélectionné"
+                
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            Swal.fire('Information', `L'utilisateur ${username} est introuvable dans la liste actuelle.`, 'info');
+        }
     }
 
     // --- GESTION WEBSOCKETS (Temps réel) ---
@@ -212,23 +254,26 @@ class PriseManager {
                 
                 // Traduction propre pour l'affichage
                 let displayStatus = rawStatus === 'occupied' ? "Occupée" : (rawStatus === 'libre' ? "Libre" : (rawStatus === 'hs' ? "🔴 Maintenance" : rawStatus));
+                let htmlContent = "";
+
                 if (rawStatus === 'occupied' && currentUsername) {
-                    displayStatus = `Occupée par ${currentUsername}`;
+                    // On remplace le texte simple par un span cliquable (lien bleu souligné)
+                    htmlContent = `Occupée par <span class="clickable-username" data-username="${currentUsername}" style="color: #2980b9; text-decoration: underline; cursor: pointer;" title="Voir l'historique de ${currentUsername}">${currentUsername}</span> (${textState})`;
+                } else {
+                    htmlContent = `${displayStatus} (${textState})`;
                 }
-                
-                let displayText = `${displayStatus} (${textState})`;
 
                 // Si c'est allumé et qu'on a de la puissance, on l'affiche
                 if (currentState && currentPower > 0) {
-                    displayText += ` - ${currentPower} W`;
+                    htmlContent += ` - ${currentPower} W`;
                 }
                 
                 // Si la prise est occupée, on ajoute l'énergie et le coût accumulés
                 if (rawStatus === 'occupied' && currentEnergy > 0) {
-                    displayText += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(2)} €`;
+                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(2)} €`;
                 }
 
-                cellState.textContent = displayText;
+                cellState.innerHTML = htmlContent;
                 
                 // Changement de couleur dynamique
                 cellState.style.color = currentState ? "#27ae60" : "#7f8c8d";
@@ -496,11 +541,13 @@ class PriseManager {
             tdEtat.className = "state-cell"; // Classe pour ciblage facile
             // On affiche le status (libre/occupied) et l'état électrique (ALLUMÉE/ÉTEINTE)
             let displayStatus = prise.status === 'occupied' ? "Occupée" : (prise.status === 'libre' ? "Libre" : (prise.status === 'hs' ? "🔴 Maintenance" : prise.status));
-            if (prise.status === 'occupied' && tr.dataset.username) {
-                displayStatus = `Occupée par ${tr.dataset.username}`;
-            }
             const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
-            tdEtat.textContent = `${displayStatus} (${elecState})`;
+            
+            if (prise.status === 'occupied' && tr.dataset.username) {
+                tdEtat.innerHTML = `Occupée par <span class="clickable-username" data-username="${tr.dataset.username}" style="color: #2980b9; text-decoration: underline; cursor: pointer;" title="Voir l'historique de ${tr.dataset.username}">${tr.dataset.username}</span> (${elecState})`;
+            } else {
+                tdEtat.textContent = `${displayStatus} (${elecState})`;
+            }
             
             if(prise.state) {
                 tdEtat.style.color = "#27ae60";
