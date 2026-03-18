@@ -297,7 +297,7 @@ class UserManager {
                 if (result.success) {
                     Swal.fire('Succès !', 'Utilisateur créé.', 'success');
                     // On utilise l'ID retourné par l'API (result.data.userId)
-                    const username = `${firstName}${lastName}`;
+                    const username = `${firstName} + " " + ${lastName}`;
                     this.addUserToDashboard(result.data.userId, username, creditAmount);
                 } else {
                     Swal.fire('Erreur', result.message, 'error');
