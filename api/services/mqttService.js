@@ -83,23 +83,32 @@ const mqttService = {
                             plugData = data.params['switch:0'];
                         }
 
-                        // 1. Gestion de la Puissance (Script 1 & 2)
+                        // 1. Gestion Intelligente de l'Énergie et de la Puissance
                         let currentPower = undefined;
-                        if (plugData.power !== undefined) currentPower = plugData.power;
-                        else if (plugData.apower !== undefined) currentPower = plugData.apower; // Support Shelly Gen 2
+                        let energyVal = undefined;
+
+                        // Cas A: La prise envoie une valeur brute (nombre) sur un sous-topic (ex: relay/0/energy)
+                        if (topicParts.length >= 5) {
+                            const subTopic = topicParts[topicParts.length - 1];
+                            if (subTopic === 'power') currentPower = parseFloat(payload);
+                            else if (subTopic === 'energy') energyVal = parseFloat(payload) / 60; // Wmin -> Wh
+                        }
+
+                        // Cas B: La prise envoie un objet JSON global (status)
+                        if (typeof plugData === 'object' && plugData !== null) {
+                            if (plugData.power !== undefined) currentPower = plugData.power;
+                            else if (plugData.apower !== undefined) currentPower = plugData.apower; // Gen 2
+
+                            if (plugData.energy !== undefined) energyVal = plugData.energy / 60; // Gen 1 (Wmin)
+                            else if (plugData.total !== undefined) energyVal = plugData.total;
+                            else if (plugData.total_wh !== undefined) energyVal = plugData.total_wh;
+                            else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) {
+                                energyVal = plugData.aenergy.total; // Gen 2
+                            }
+                        }
 
                         if (currentPower !== undefined) {
                             socketService.emit('power_update', { plugId, power: currentPower });
-                        }
-
-                        // 1.bis Gestion de l'Énergie (On sauvegarde l'index en base)
-                        let energyVal = undefined;
-                        // CORRECTION : Sur Shelly Gen 1, "energy" est en Watt-minutes. On divise par 60 pour avoir des Wh.
-                        if (plugData.energy !== undefined) energyVal = plugData.energy / 60;
-                        else if (plugData.total !== undefined) energyVal = plugData.total;
-                        else if (plugData.total_wh !== undefined) energyVal = plugData.total_wh;
-                        else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) {
-                            energyVal = plugData.aenergy.total; // Support Shelly Gen 2
                         }
 
                         if (energyVal !== undefined) {
@@ -115,6 +124,8 @@ const mqttService = {
                                     let currentEnergyWh = energyVal - indexStart;
                                     if (currentEnergyWh < 0) currentEnergyWh = 0;
                                     
+                                    console.log(`🔌 [WS] Émission live_consumption: User=${activeSession.user_id}, Session=${activeSession.id}, Wh=${currentEnergyWh}`);
+
                                     // On notifie le dashboard admin
                                     socketService.emit('live_consumption', {
                                         userId: activeSession.user_id,

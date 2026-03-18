@@ -52,14 +52,21 @@ class ConsumptionGraph{
 
             // NOUVEAU : Écoute de l'énergie en temps réel
             this.socket.on('live_consumption', (data) => {
+                console.log(`⚡ [WS] live_consumption reçu :`, data);
+
                 if (this.userManager && this.userManager.selectedUserId == data.userId) {
                     // On met à jour uniquement le dernier point du graphique si l'ID de session correspond
                     if (this.chart && this.lastSessionId == data.sessionId) {
                         console.log(`📈 Mise à jour du graphique en direct : ${data.energyWh} Wh`);
                         const dataArray = this.chart.data.datasets[0].data;
                         dataArray[dataArray.length - 1] = data.energyWh;
-                        this.chart.update('none'); // Mise à jour fluide sans recommencer l'animation initiale
+                        this.chart.update(); // FORCE LA MISE A JOUR VISUELLE
+                    } else {
+                        console.log(`⚠️ Ignoré : Session Actuelle (${this.lastSessionId}) != Session Reçue (${data.sessionId})`);
                     }
+                } else {
+                    const currentId = this.userManager ? this.userManager.selectedUserId : 'Aucun';
+                    console.log(`⚠️ Ignoré : User Actuel (${currentId}) != User Reçu (${data.userId})`);
                 }
             });
         }
