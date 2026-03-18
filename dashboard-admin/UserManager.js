@@ -235,7 +235,10 @@ class UserManager {
         li.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <span><b>${username}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€</span>
-                <button class="btn-info-user" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0; margin-left: 10px;" title="Voir les infos de l'utilisateur">ℹ️</button>
+                <div>
+                    <button class="btn-edit-user" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0; margin-left: 10px;" title="Modifier l'utilisateur">✏️</button>
+                    <button class="btn-info-user" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0; margin-left: 10px;" title="Voir les infos de l'utilisateur">ℹ️</button>
+                </div>
             </div>
         `;
         
@@ -251,6 +254,13 @@ class UserManager {
                 this.showUserDetails(id);
                 return;
             }
+            
+            // Si on a cliqué sur le bouton d'édition
+            if (e.target.closest('.btn-edit-user')) {
+                e.stopPropagation();
+                this.editUserDetails(id);
+                return;
+            }
 
             // Gestion de la sélection visuelle
             document.querySelectorAll("#userList li").forEach(el => el.style.backgroundColor = "");
@@ -259,6 +269,71 @@ class UserManager {
         });
 
         userList.appendChild(li);
+    }
+
+    // Ouvre une fenêtre pour modifier un utilisateur
+    async editUserDetails(userId) {
+        if (!this.token) await this.loginAdmin();
+        try {
+            Swal.fire({ title: 'Chargement...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            // Récupère les infos actuelles (via la route history)
+            const response = await fetch(`${this.apiUrl}/auth/users/${userId}/history`, {
+                headers: { "Authorization": `Bearer ${this.token}` }
+            });
+            if (!response.ok) throw new Error("Erreur de récupération");
+            const data = await response.json();
+            const user = data.user;
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Modifier l\'utilisateur',
+                html: `
+                    <input id="edit-username" class="swal2-input" placeholder="Nom d'utilisateur" value="${user.username}">
+                    <input id="edit-email" type="email" class="swal2-input" placeholder="Email" value="${user.email}">
+                    <input id="edit-password" type="password" class="swal2-input" placeholder="Nouveau mot de passe (optionnel)">
+                    <input id="edit-balance" type="number" step="0.01" class="swal2-input" placeholder="Solde (€)" value="${parseFloat(user.balance).toFixed(2)}">
+                    <small style="color: #7f8c8d; display: block; margin-top: 5px;">Laissez le mot de passe vide pour ne pas le modifier.</small>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: '💾 Sauvegarder',
+                cancelButtonText: 'Annuler',
+                preConfirm: () => {
+                    const username = document.getElementById('edit-username').value;
+                    const email = document.getElementById('edit-email').value;
+                    const password = document.getElementById('edit-password').value;
+                    const balance = parseFloat(document.getElementById('edit-balance').value);
+                    
+                    if (!username || !email || isNaN(balance)) {
+                        Swal.showValidationMessage('Veuillez remplir le nom, l\'email et le solde.');
+                        return false;
+                    }
+                    if (balance < 0 || balance > 100) {
+                        Swal.showValidationMessage('Le solde doit être compris entre 0€ et 100€.');
+                        return false;
+                    }
+                    return { username, email, password, balance };
+                }
+            });
+
+            if (formValues) {
+                Swal.fire({ title: 'Sauvegarde...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const updateResponse = await fetch(`${this.apiUrl}/auth/users/${userId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.token}` },
+                    body: JSON.stringify(formValues)
+                });
+                const updateData = await updateResponse.json();
+                if (updateResponse.ok) {
+                    Swal.fire('Succès', 'Utilisateur mis à jour.', 'success');
+                    // Le WebSocket rechargera la liste tout seul
+                } else {
+                    Swal.fire('Erreur', updateData.error || "Impossible de modifier l'utilisateur.", 'error');
+                }
+            }
+        } catch (e) {
+            Swal.fire('Erreur', 'Impossible de charger ou modifier les informations.', 'error');
+        }
     }
 
     // Affiche une popup avec toutes les infos de l'utilisateur

@@ -18,6 +18,9 @@ router.get('/users/:id/history', authMiddleware, authController.getUserHistory);
 // Admin seulement : Supprimer un utilisateur spécifique
 router.delete('/users/:id', authMiddleware, adminMiddleware, authController.deleteUserById);
 
+// Admin seulement : Mettre à jour un utilisateur
+router.put('/users/:id', authMiddleware, adminMiddleware, authController.updateUser);
+
 // Public : Connexion (C'est ici que le POST est défini)
 router.post('/login', authController.login);
 

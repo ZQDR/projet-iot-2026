@@ -32,6 +32,20 @@ class UserModel {
         return result.affectedRows > 0;
     }
 
+    // Mettre à jour toutes les infos d'un utilisateur
+    static async update(id, username, email, passwordHash, balance) {
+        if (passwordHash) {
+            const sql = 'UPDATE users SET username = ?, email = ?, password = ?, balance = ? WHERE id = ?';
+            const [result] = await db.execute(sql, [username, email, passwordHash, balance, id]);
+            return result.affectedRows > 0;
+        } else {
+            // Si aucun mot de passe n'est fourni, on garde l'ancien
+            const sql = 'UPDATE users SET username = ?, email = ?, balance = ? WHERE id = ?';
+            const [result] = await db.execute(sql, [username, email, balance, id]);
+            return result.affectedRows > 0;
+        }
+    }
+
     // Récupérer tous les utilisateurs (Pour Admin)
     // On ne sélectionne que 'username' et 'balance' comme demandé
     static async findAll() {

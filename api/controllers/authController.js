@@ -138,6 +138,39 @@ exports.getUserHistory = async (req, res) => {
     }
 };
 
+// ADMIN : Mettre à jour les informations d'un utilisateur
+exports.updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, email, password, balance } = req.body;
+
+        if (!username || !email || balance === undefined) {
+            return res.status(400).json({ error: 'Tous les champs (sauf mot de passe) sont obligatoires.' });
+        }
+
+        if (balance < 0 || balance > 100) {
+            return res.status(400).json({ error: 'Le solde doit être compris entre 0€ et 100€.' });
+        }
+
+        let hash = null;
+        if (password && password.trim() !== '') {
+            const salt = await bcrypt.genSalt(10);
+            hash = await bcrypt.hash(password, salt);
+        }
+
+        const success = await UserModel.update(id, username, email, hash, balance);
+        if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+
+        socketService.emit('user_data_updated', { userId: id });
+        res.json({ message: 'Utilisateur mis à jour avec succès.' });
+
+    } catch (err) {
+        console.error(err);
+        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Cet email est déjà utilisé par un autre compte.' });
+        res.status(500).json({ error: 'Erreur lors de la mise à jour.' });
+    }
+};
+
 // PROFIL (Sécurisé)
 exports.getProfile = async (req, res) => {
     // req.user.id vient du middleware
