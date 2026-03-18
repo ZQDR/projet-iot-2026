@@ -198,7 +198,7 @@ class UserManager {
         // 1. Si on n'a pas de token, on se connecte d'abord
         if (!this.token) await this.loginAdmin();
 
-        const username = `${firstName} + " " + ${lastName}`;
+       const username = firstName + " " + lastName;
         const payload = { username, email, password, balance: creditAmount };
 
         try {
