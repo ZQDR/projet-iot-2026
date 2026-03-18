@@ -603,16 +603,24 @@
         socket.on('session_auto_stopped', (data) => {
             // On vérifie que cette alerte nous est bien destinée
             if (data.userId == myUserId) {
+                let confirmText = 'OK';
+                let showRecharge = false;
+
+                if (data.reason === 'solde_epuise') {
+                    confirmText = 'Recharger mon compte';
+                    showRecharge = true;
+                }
+
                 // 1. On affiche l'alerte
                 Swal.fire({
                     title: 'Session Interrompue 🔌',
                     text: data.message || "Votre solde est épuisé. La prise a été coupée automatiquement.",
                     icon: 'warning',
-                    confirmButtonText: 'Recharger mon compte',
+                    confirmButtonText: confirmText,
                     confirmButtonColor: '#3498db',
                     allowOutsideClick: false
                 }).then((result) => {
-                    if (result.isConfirmed) {
+                    if (result.isConfirmed && showRecharge) {
                         // 2. Action au clic : rediriger vers la zone de paiement PayPal
                         const rechargeSection = document.querySelector(".card");
                         if (rechargeSection) {

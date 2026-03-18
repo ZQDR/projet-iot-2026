@@ -221,6 +221,13 @@ exports.forceStopCharge = async (req, res) => {
             await TransactionModel.create(userId, 'payment', -cost, `Arrêt forcé (Admin) sur ${plugId}`);
             await ConsumptionModel.closeSession(session.id, energyKwh, cost);
             socketService.emit('user_data_updated', { userId: userId });
+            
+            socketService.emit('session_auto_stopped', {
+                userId: userId,
+                plugId: plugId,
+                reason: 'admin_force_stop',
+                message: `Un administrateur a forcé l'arrêt de votre session sur la prise ${plugId}.`
+            });
         }
 
         // 2. Extinction et libération de la prise
@@ -264,6 +271,13 @@ exports.toggleMaintenance = async (req, res) => {
                 await ConsumptionModel.closeSession(session.id, energyKwh, cost);
                 
                 socketService.emit('user_data_updated', { userId: userId });
+
+                socketService.emit('session_auto_stopped', {
+                    userId: userId,
+                    plugId: plugId,
+                    reason: 'maintenance',
+                    message: `La prise ${plugId} a été mise en maintenance. Votre session est arrêtée.`
+                });
             }
 
             // 2. Mettre en maintenance et éteindre électriquement
