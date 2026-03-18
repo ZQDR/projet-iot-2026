@@ -105,6 +105,27 @@ const mqttService = {
                         if (energyVal !== undefined) {
                             console.log(`💾 [DEBUG BDD] Mise à jour de last_index pour ${plugId} : ${energyVal} (Type: ${typeof energyVal})`);
                             await db.execute('UPDATE plugs SET last_index = ? WHERE id = ?', [energyVal, plugId]);
+
+                            // --- NOUVEAU : Calcul de la conso en direct pour le Graph Admin ---
+                            try {
+                                const [sessions] = await db.execute('SELECT id, user_id, index_start FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
+                                if (sessions.length > 0) {
+                                    const activeSession = sessions[0];
+                                    const indexStart = parseFloat(activeSession.index_start) || 0;
+                                    let currentEnergyWh = energyVal - indexStart;
+                                    if (currentEnergyWh < 0) currentEnergyWh = 0;
+                                    
+                                    // On notifie le dashboard admin
+                                    socketService.emit('live_consumption', {
+                                        userId: activeSession.user_id,
+                                        plugId: plugId,
+                                        sessionId: activeSession.id,
+                                        energyWh: currentEnergyWh
+                                    });
+                                }
+                            } catch (err) {
+                                console.error("Erreur calcul conso temps réel MQTT:", err);
+                            }
                         } else {
                             console.log(`⚠️ [DEBUG BDD] Aucune donnée d'énergie trouvée dans ce message pour ${plugId}.`);
                         }

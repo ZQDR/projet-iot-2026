@@ -39,6 +39,9 @@ exports.scanAndStart = async (req, res) => {
             await db.execute('UPDATE consumption SET index_start = ? WHERE id = ?', [startIndex, session.id]);
         }
 
+        // --- NOUVEAU : On prévient l'admin qu'une session a commencé pour rafraîchir le graph ---
+        socketService.emit('user_data_updated', { userId: userId });
+
         res.json({ message: 'Session démarrée ! Le courant est activé.', plugId });
 
     } catch (err) {
