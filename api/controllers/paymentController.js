@@ -1,6 +1,7 @@
 const UserModel = require('../models/userModel');
 const TransactionModel = require('../models/transactionModel'); // <-- NOUVEAU
 const paypalService = require('../services/paypalService');
+const socketService = require('../services/socketService');
 
 // ÉTAPE 1 : Le Front demande la permission de payer (Appelé par createOrder dans paypalManager.js)
 exports.createPayPalOrder = async (req, res) => {
@@ -63,6 +64,9 @@ exports.capturePayPalOrder = async (req, res) => {
                     // Si le log échoue, on ne bloque pas la réponse client, mais on l'affiche côté serveur
                     console.error("⚠️ Erreur log transaction :", logErr.message);
                 }
+
+                // Notifier les dashboards du changement de solde
+                socketService.emit('user_data_updated', { userId: userId });
 
                 res.json({
                     message: 'Paiement réussi ! Solde mis à jour.',

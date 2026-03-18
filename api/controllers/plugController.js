@@ -153,6 +153,9 @@ exports.createPlug = async (req, res) => {
         // On initialise à 'libre' et 'FALSE' (éteint)
         await db.execute('INSERT INTO plugs (id, status, state) VALUES (?, "libre", 0)', [plugId]);
 
+        // Avertir le dashboard admin et les clients
+        socketService.emit('new_plug_added', { id: plugId });
+
         res.status(201).json({ message: "Prise ajoutée avec succès.", plugId });
     } catch (err) {
         console.error("Erreur création prise:", err);
@@ -167,6 +170,9 @@ exports.deletePlug = async (req, res) => {
 
         // Suppression SQL
         await db.execute('DELETE FROM plugs WHERE id = ?', [plugId]);
+
+        // Avertir le dashboard admin et les clients pour recharger la liste
+        socketService.emit('new_plug_added', { id: plugId });
 
         res.json({ message: "Prise supprimée avec succès." });
     } catch (err) {

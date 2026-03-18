@@ -32,6 +32,9 @@ exports.register = async (req, res) => {
         // Créer l'utilisateur
         const userId = await UserModel.create(username, email, hash, balance);
 
+        // Notifier les dashboards de l'apparition d'un nouvel utilisateur
+        socketService.emit('user_data_updated', { userId: userId });
+
         res.status(201).json({ message: 'Utilisateur créé !', userId });
 
     } catch (err) {
@@ -174,6 +177,7 @@ exports.deleteUserById = async (req, res) => {
 
         const success = await UserModel.delete(id);
         if (!success) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+        socketService.emit('user_data_updated', { userId: id }); // Notifier la disparition
         res.json({ message: 'Utilisateur supprimé avec succès.' });
     } catch (err) {
         res.status(500).json({ error: err.message });

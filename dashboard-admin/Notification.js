@@ -24,6 +24,8 @@ class NotificationManager {
             
             // Dès qu'une prise passe en 'hs' (ou en 'libre'), on rafraîchit les alertes
             this.socket.on('status_update', () => this.fetchAlerts());
+            // Si on supprime une prise, on veut qu'elle disparaisse des alertes
+            this.socket.on('new_plug_added', () => this.fetchAlerts());
         }
     }
 

@@ -71,13 +71,6 @@ class PriseManager {
                 this.updateRowUI(data.plugId, { status: data.status });
             });
             
-            // 1.5 Rafraîchissement des données utilisateur (solde)
-            this.socket.on('user_data_updated', () => {
-                if (this.userManager) {
-                    this.userManager.fetchAllUsers();
-                }
-            });
-            
             // 2. Nouvelle prise détectée
             this.socket.on('new_plug_added', () => {
                 console.log("Nouvelle prise détectée, rechargement...");

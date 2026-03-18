@@ -427,6 +427,13 @@
                 }
             }
         });
+
+        // NOUVEAU : Réagir instantanément à tout changement sur le compte (paiement, admin, etc.)
+        socket.on('user_data_updated', (data) => {
+            if (data.userId == myUserId) {
+                loadProfile(); // Rafraîchit le solde ou déconnecte si le compte a été supprimé par l'admin
+            }
+        });
         
         // Écoute de l'arrêt automatique pour solde épuisé
         socket.on('session_auto_stopped', (data) => {

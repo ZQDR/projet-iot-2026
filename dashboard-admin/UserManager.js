@@ -39,6 +39,11 @@ class UserManager {
                     }
                 }
             });
+
+            // NOUVEAU: Rafraîchissement complet (création, suppression, recharge PayPal, arrêt charge)
+            this.socket.on('user_data_updated', () => {
+                this.fetchAllUsers();
+            });
         }
     }
 
@@ -101,6 +106,8 @@ class UserManager {
                         if (user.username === 'Admin') return; // Masquer l'utilisateur Admin
                         this.addUserToDashboard(user.id, user.username, user.balance);
                     });
+                    // On réapplique le filtre de recherche s'il y en avait un
+                    this.applySearchFilter();
                 }
             }
         } catch (error) {
@@ -108,22 +115,27 @@ class UserManager {
         }
     }
 
+    applySearchFilter() {
+        const searchInput = document.querySelector(".search-bar input");
+        if (searchInput) {
+            const term = searchInput.value.toLowerCase();
+            const items = document.querySelectorAll("#userList li");
+            
+            items.forEach(li => {
+                const username = li.dataset.username.toLowerCase();
+                if (username.includes(term)) {
+                    li.style.display = "";
+                } else {
+                    li.style.display = "none";
+                }
+            });
+        }
+    }
+
     initSearch() {
         const searchInput = document.querySelector(".search-bar input");
         if (searchInput) {
-            searchInput.addEventListener("input", (e) => {
-                const term = e.target.value.toLowerCase();
-                const items = document.querySelectorAll("#userList li");
-                
-                items.forEach(li => {
-                    const username = li.dataset.username.toLowerCase();
-                    if (username.includes(term)) {
-                        li.style.display = "";
-                    } else {
-                        li.style.display = "none";
-                    }
-                });
-            });
+            searchInput.addEventListener("input", () => this.applySearchFilter());
         }
     }
 
@@ -220,6 +232,11 @@ class UserManager {
         li.dataset.username = username; // Pour le Graph
         li.innerHTML = `<b>${username}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€`;
         
+        // Maintenir la sélection visuelle lors du rechargement en temps réel
+        if (this.selectedUserId == id) {
+            li.style.backgroundColor = "#d0eaff";
+        }
+
         li.addEventListener("click", () => {
             // Gestion de la sélection visuelle
             document.querySelectorAll("#userList li").forEach(el => el.style.backgroundColor = "");
