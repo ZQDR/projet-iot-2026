@@ -88,10 +88,10 @@ class ConsumptionGraph{
             if (!response.ok) {
                 console.error("Erreur API Graphique :", response.status);
                 if (response.status === 401 || response.status === 403) {
-                    alert("Session expirée. Veuillez recharger la page.");
+                    Swal.fire('Erreur', 'Session expirée. Veuillez recharger la page.', 'error');
                 } else {
                     // On affiche le code d'erreur pour aider au débogage
-                    alert(`Impossible de récupérer l'historique. (Erreur ${response.status})`);
+                    Swal.fire('Erreur', `Impossible de récupérer l'historique. (Erreur ${response.status})`, 'error');
                 }
                 return;
             }

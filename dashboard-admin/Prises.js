@@ -14,10 +14,18 @@ class PriseManager {
 
     init() {
 
-        this.btnAddPrise.addEventListener("click", () => {
-            const nom = prompt("Identifiant de la prise (ex: S1-01)")
+        this.btnAddPrise.addEventListener("click", async () => {
+            const { value: nom } = await Swal.fire({
+                title: 'Ajouter une prise',
+                input: 'text',
+                inputLabel: 'Identifiant de la prise (ex: S1-01)',
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    if (!value) return 'Veuillez entrer un identifiant !'
+                }
+            });
             if (nom) {
-                this.addPrise(nom)
+                this.addPrise(nom);
             }
         })
 
@@ -27,7 +35,7 @@ class PriseManager {
                 if (this.selectedPrise) {
                     this.deletePrise(this.selectedPrise);
                 } else {
-                    alert("Veuillez sélectionner une prise dans la liste.");
+                    Swal.fire('Attention', 'Veuillez sélectionner une prise dans la liste.', 'warning');
                 }
             });
         }
@@ -171,10 +179,10 @@ class PriseManager {
             })
 
             if (response.ok) {
-                alert("Prise ajoutée !");
+                Swal.fire('Succès !', 'Prise ajoutée !', 'success');
                 this.loadPrises(); // Recharger la liste
             } else {
-                alert("Erreur lors de l'ajout (ID déjà existant ?)");
+                Swal.fire('Erreur', "Erreur lors de l'ajout (ID déjà existant ?)", 'error');
             }
         } catch (error) {
             console.error("Erreur ajout prise :", error)
@@ -193,7 +201,7 @@ class PriseManager {
                 // L'UI est actualisée par le WebSocket, on peut juste laisser faire
             } else {
                 const data = await response.json();
-                alert("Erreur : " + (data.error || "Impossible de changer le mode maintenance."));
+                Swal.fire('Erreur', data.error || "Impossible de changer le mode maintenance.", 'error');
             }
         } catch (error) {
             console.error("Erreur maintenance :", error);
@@ -201,7 +209,15 @@ class PriseManager {
     }
 
     async deletePrise(plugId) {
-        if (!confirm(`Voulez-vous vraiment supprimer la prise ${plugId} ?`)) return;
+        const result = await Swal.fire({
+            title: 'Êtes-vous sûr ?',
+            text: `Voulez-vous vraiment supprimer la prise ${plugId} ?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Oui, supprimer'
+        });
+        if (!result.isConfirmed) return;
 
         // On s'assure d'être connecté
         if (!this.userManager.token) await this.userManager.loginAdmin();
@@ -217,7 +233,7 @@ class PriseManager {
                 this.selectedPrise = null; // Reset sélection
                 this.loadPrises(); // Recharger la liste
             } else {
-                alert("Erreur : " + (data.error || "Impossible de supprimer."));
+                Swal.fire('Erreur', data.error || "Impossible de supprimer.", 'error');
             }
         } catch (error) {
             console.error("Erreur suppression prise :", error);
