@@ -258,7 +258,7 @@ class PriseManager {
 
                 if (rawStatus === 'occupied' && currentUsername) {
                     // On remplace le texte simple par un span cliquable (lien bleu souligné)
-                    htmlContent = `Occupée par <span class="clickable-username" data-username="${currentUsername}" style="color: #2980b9; text-decoration: underline; cursor: pointer;" title="Voir l'historique de ${currentUsername}">${currentUsername}</span> (${textState})`;
+                    htmlContent = `Occupée par <span class="clickable-username" data-username="${currentUsername}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${currentUsername}">${currentUsername}</span> (${textState})`;
                 } else {
                     htmlContent = `${displayStatus} (${textState})`;
                 }
@@ -544,7 +544,7 @@ class PriseManager {
             const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
             
             if (prise.status === 'occupied' && tr.dataset.username) {
-                tdEtat.innerHTML = `Occupée par <span class="clickable-username" data-username="${tr.dataset.username}" style="color: #2980b9; text-decoration: underline; cursor: pointer;" title="Voir l'historique de ${tr.dataset.username}">${tr.dataset.username}</span> (${elecState})`;
+                tdEtat.innerHTML = `Occupée par <span class="clickable-username" data-username="${tr.dataset.username}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${tr.dataset.username}">${tr.dataset.username}</span> (${elecState})`;
             } else {
                 tdEtat.textContent = `${displayStatus} (${elecState})`;
             }
