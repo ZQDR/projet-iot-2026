@@ -58,8 +58,8 @@ exports.stopCharge = async (req, res) => {
 
         // 1. Récupération de la consommation RÉELLE
         const plugData = await PlugModel.findById(plugId);
-        const currentIndex = plugData.last_index || 0;
-        const startIndex = session.index_start || 0;
+        const currentIndex = parseFloat(plugData.last_index) || 0;
+        const startIndex = parseFloat(session.index_start) || 0;
 
         // Calcul du delta (Fin - Début) en Wh, puis conversion en kWh
         let realEnergyWh = currentIndex - startIndex;
@@ -70,10 +70,10 @@ exports.stopCharge = async (req, res) => {
         const PRICE_PER_KWH = 0.50;
         let cost = energyKwh * PRICE_PER_KWH;
 
-        // --- OPTION : COÛT MINIMUM ---
-        // Si le coût est inférieur à 0.01€ (mais que la session a existé), on facture 0.01€
-        // Ou on peut mettre un forfait de connexion fixe
-        if (cost > 0 && cost < 0.01) cost = 0.01;
+        // --- FORFAIT DE CONNEXION / COÛT MINIMUM ---
+        // Si l'utilisateur a démarré la prise, on facture au moins 0.05€ même si la conso est nulle
+        // Cela évite l'impression que le système est cassé lors des petits tests
+        if (cost < 0.05) cost = 0.05;
 
         // 2. Paiement
         const user = await UserModel.findById(userId);

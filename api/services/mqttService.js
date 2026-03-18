@@ -94,7 +94,8 @@ const mqttService = {
 
                         // 1.bis Gestion de l'Énergie (On sauvegarde l'index en base)
                         let energyVal = undefined;
-                        if (plugData.energy !== undefined) energyVal = plugData.energy;
+                        // CORRECTION : Sur Shelly Gen 1, "energy" est en Watt-minutes. On divise par 60 pour avoir des Wh.
+                        if (plugData.energy !== undefined) energyVal = plugData.energy / 60;
                         else if (plugData.total !== undefined) energyVal = plugData.total;
                         else if (plugData.total_wh !== undefined) energyVal = plugData.total_wh;
                         else if (plugData.aenergy !== undefined && plugData.aenergy.total !== undefined) {
