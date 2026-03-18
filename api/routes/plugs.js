@@ -32,6 +32,10 @@ router.delete('/:plugId', authMiddleware, adminMiddleware, plugController.delete
 // POST /api/plugs/:plugId/maintenance
 router.post('/:plugId/maintenance', authMiddleware, adminMiddleware, plugController.toggleMaintenance);
 
+// Route pour forcer l'arrêt d'une prise occupée (Admin)
+// POST /api/plugs/:plugId/force-stop
+router.post('/:plugId/force-stop', authMiddleware, adminMiddleware, plugController.forceStopCharge);
+
 // Route pour générer le QR code d'une prise (publique/administrative)
 // GET /api/plugs/S1-01/qrcode
 router.get('/:plugId/qrcode', plugController.generateQrCode);

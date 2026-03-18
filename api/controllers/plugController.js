@@ -191,6 +191,50 @@ exports.deletePlug = async (req, res) => {
     }
 };
 
+// --- POUR L'ADMIN : FORCER L'ARRÊT D'UNE SESSION ---
+exports.forceStopCharge = async (req, res) => {
+    try {
+        const { plugId } = req.params;
+        const plug = await PlugModel.findById(plugId);
+        if (!plug) return res.status(404).json({ error: "Prise introuvable." });
+
+        if (plug.status !== 'occupied') {
+            return res.status(400).json({ error: "Aucune session en cours sur cette prise." });
+        }
+
+        // 1. Chercher et clôturer la session active
+        const [sessions] = await db.execute('SELECT * FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
+        if (sessions.length > 0) {
+            const session = sessions[0];
+            const userId = session.user_id;
+
+            const currentIndex = parseFloat(plug.last_index) || 0;
+            const startIndex = parseFloat(session.index_start) || 0;
+            let realEnergyWh = Math.max(0, currentIndex - startIndex);
+            const energyKwh = realEnergyWh / 1000;
+            let cost = Math.max(0.05, energyKwh * 0.50); // Minimum 5 centimes
+
+            const user = await UserModel.findById(userId);
+            const newBalance = parseFloat(user.balance) - cost;
+
+            await UserModel.updateBalance(userId, newBalance);
+            await TransactionModel.create(userId, 'payment', -cost, `Arrêt forcé (Admin) sur ${plugId}`);
+            await ConsumptionModel.closeSession(session.id, energyKwh, cost);
+            socketService.emit('user_data_updated', { userId: userId });
+        }
+
+        // 2. Extinction et libération de la prise
+        await db.execute('UPDATE plugs SET status = "libre", state = 0 WHERE id = ?', [plugId]);
+        mqttService.turnOff(plugId);
+        socketService.emit('status_update', { plugId, status: 'libre' });
+
+        res.json({ message: "Session arrêtée avec succès." });
+    } catch (err) {
+        console.error("Erreur forceStopCharge:", err);
+        res.status(500).json({ error: "Erreur lors de l'arrêt forcé." });
+    }
+};
+
 // --- POUR L'ADMIN : BASCULER LE MODE MAINTENANCE ---
 exports.toggleMaintenance = async (req, res) => {
     try {

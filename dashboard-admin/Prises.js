@@ -150,6 +150,12 @@ class PriseManager {
                 if (btnMaint) {
                     btnMaint.textContent = rawStatus === 'hs' ? "✅ Rétablir" : "🔧 Maint.";
                 }
+
+                // Mise à jour de la visibilité du bouton Stop
+                const btnStop = row.querySelector(".btn-stop");
+                if (btnStop) {
+                    btnStop.style.display = rawStatus === 'occupied' ? "inline-block" : "none";
+                }
             }
         }
     }
@@ -236,6 +242,47 @@ class PriseManager {
             }
         } catch (error) {
             console.error("Erreur maintenance :", error);
+            Swal.fire('Erreur réseau', "Impossible de joindre le serveur.", 'error');
+        }
+    }
+
+    async forceStop(plugId) {
+        const result = await Swal.fire({
+            title: 'Forcer l\'arrêt ?',
+            text: `Voulez-vous vraiment arrêter la session sur la prise ${plugId} ? L'utilisateur en cours sera facturé.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Oui, arrêter'
+        });
+
+        if (!result.isConfirmed) return;
+
+        if (!this.userManager.token) {
+            const logged = await this.userManager.loginAdmin();
+            if (!logged) return;
+        }
+
+        try {
+            Swal.fire({
+                title: 'Arrêt en cours...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const response = await fetch(`${this.apiUrl}/plugs/${plugId}/force-stop`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${this.userManager.token}` }
+            });
+
+            if (response.ok) {
+                Swal.fire('Succès !', 'La session a été arrêtée proprement.', 'success');
+            } else {
+                const data = await response.json().catch(() => ({})); 
+                Swal.fire('Erreur', data.error || `Erreur serveur (${response.status}).`, 'error');
+            }
+        } catch (error) {
+            console.error("Erreur force-stop :", error);
             Swal.fire('Erreur réseau', "Impossible de joindre le serveur.", 'error');
         }
     }
@@ -353,6 +400,18 @@ class PriseManager {
                 this.toggleMaintenance(prise.id);
             };
             tdAction.appendChild(btnMaint);
+            
+            // Bouton de Forcer l'arrêt (visible uniquement si occupée)
+            const btnStop = document.createElement("button");
+            btnStop.textContent = "🛑 Stop";
+            btnStop.className = "btn-stop";
+            btnStop.style.marginLeft = "10px";
+            btnStop.style.display = prise.status === 'occupied' ? "inline-block" : "none";
+            btnStop.onclick = (e) => {
+                e.stopPropagation();
+                this.forceStop(prise.id);
+            };
+            tdAction.appendChild(btnStop);
 
             tr.appendChild(tdNom)
             tr.appendChild(tdEtat)
