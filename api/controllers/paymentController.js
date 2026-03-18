@@ -2,6 +2,8 @@ const UserModel = require('../models/userModel');
 const TransactionModel = require('../models/transactionModel'); // <-- NOUVEAU
 const paypalService = require('../services/paypalService');
 const socketService = require('../services/socketService');
+const stripe = require('../services/stripeService');
+const db = require('../config/db'); // Nécessaire pour vérifier les doublons
 
 // ÉTAPE 1 : Le Front demande la permission de payer (Appelé par createOrder dans paypalManager.js)
 exports.createPayPalOrder = async (req, res) => {
@@ -82,5 +84,78 @@ exports.capturePayPalOrder = async (req, res) => {
     } catch (err) {
         console.error("Erreur Capture Order:", err.message || err);
         res.status(500).json({ error: "Erreur lors de la validation du paiement." });
+    }
+};
+
+// --- STRIPE : CRÉATION DE LA SESSION DE PAIEMENT ---
+exports.createStripeSession = async (req, res) => {
+    try {
+        if (!stripe) return res.status(500).json({ error: "Stripe n'est pas configuré sur le serveur (Clé manquante)." });
+
+        const { amount } = req.body;
+        if (!amount || isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ error: "Montant invalide." });
+        }
+
+        // On demande à Stripe de créer une page de paiement temporaire
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'], // Accepte CB, Google Pay, Apple Pay
+            line_items: [{
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: 'Recharge Crédit Lycée Newton',
+                        description: 'Rechargement du compte étudiant',
+                    },
+                    unit_amount: Math.round(amount * 100), // Stripe exige des centimes (ex: 10€ -> 1000)
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            // Redirection vers le dashboard client après paiement
+            success_url: `${req.headers.origin}/?stripe_session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${req.headers.origin}/`,
+            client_reference_id: req.user.id.toString(), // On garde l'ID de l'élève en mémoire
+        });
+
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error("Erreur Stripe Create:", err);
+        res.status(500).json({ error: "Erreur lors de l'initialisation du paiement." });
+    }
+};
+
+// --- STRIPE : VÉRIFICATION AU RETOUR DE L'ÉLÈVE ---
+exports.verifyStripeSession = async (req, res) => {
+    try {
+        if (!stripe) return res.status(500).json({ error: "Stripe non configuré." });
+        const { sessionId } = req.body;
+        const userId = req.user.id;
+        if (!sessionId) return res.status(400).json({ error: "Session invalide." });
+
+        // On interroge les serveurs de Stripe pour vérifier si l'argent a bien été versé
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === 'paid' && session.client_reference_id === userId.toString()) {
+            // Vérification de sécurité : On s'assure qu'on n'a pas déjà crédité cette transaction
+            const [existingTx] = await db.execute('SELECT id FROM transactions WHERE description LIKE ?', [`%${sessionId}%`]);
+            if (existingTx.length > 0) return res.json({ message: "Paiement déjà validé." });
+
+            const amountFloat = session.amount_total / 100; // Centimes -> Euros
+            const user = await UserModel.findById(userId);
+            const newBalance = parseFloat(user.balance) + amountFloat;
+
+            if (await UserModel.updateBalance(userId, newBalance)) {
+                await TransactionModel.create(userId, 'recharge', amountFloat, `Rechargement Stripe CB (${sessionId})`);
+                socketService.emit('user_data_updated', { userId: userId });
+
+                return res.json({ message: 'Paiement Stripe validé !', newBalance: newBalance.toFixed(2) });
+            }
+        }
+
+        res.status(400).json({ error: "Paiement non validé par la banque." });
+    } catch (err) {
+        console.error("Erreur Stripe Verify:", err);
+        res.status(500).json({ error: "Erreur serveur." });
     }
 };

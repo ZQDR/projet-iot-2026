@@ -146,6 +146,10 @@
         <option value="20.00">20.00 €</option>
     </select>
     <div id="paypal-button-container" style="margin-top: 15px;"></div>
+    <!-- NOUVEAU BOUTON STRIPE -->
+    <button class="btn-primary" style="background-color: #635bff; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="payWithStripe()">
+        💳 Payer par Carte Bancaire
+    </button>
 </div>
 
     <div class="form-group">
@@ -383,6 +387,64 @@
         }
     }
 
+    // --- 3c. PAIEMENT PAR CARTE (STRIPE) ---
+    async function payWithStripe() {
+        const amount = document.getElementById('amountToPay').value;
+        const token = localStorage.getItem('jwtToken');
+        
+        try {
+            Swal.fire({ title: 'Redirection sécurisée...', text: 'Veuillez patienter', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            const response = await fetch(`${API_URL}/payment/create-stripe-session`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ amount })
+            });
+            const data = await response.json();
+            
+            if (response.ok && data.url) {
+                window.location.href = data.url; // Redirection vers l'interface Stripe
+            } else {
+                Swal.fire('Erreur', data.error || "Impossible d'initialiser Stripe.", 'error');
+            }
+        } catch (err) {
+            Swal.fire('Erreur', "Erreur de connexion au serveur.", 'error');
+        }
+    }
+
+    // --- Vérification du retour depuis Stripe ---
+    async function checkStripeReturn() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('stripe_session_id');
+
+        if (sessionId) {
+            const token = localStorage.getItem('jwtToken');
+            if(!token) return;
+
+            // Nettoyer l'URL de la barre d'adresse pour faire propre
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            try {
+                Swal.fire({ title: 'Vérification...', text: 'Validation de votre paiement...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const response = await fetch(`${API_URL}/payment/verify-stripe-session`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await response.json();
+
+                if (response.ok && !data.message?.includes("déjà validé")) {
+                    Swal.fire('Succès !', `Rechargement réussi. Votre solde est à jour.`, 'success');
+                    loadProfile();
+                } else if (data.message?.includes("déjà validé")) {
+                    Swal.close(); // Ignorer silencieusement si on actualise la page par erreur
+                } else {
+                    Swal.fire('Erreur', data.error || "Paiement non validé.", 'error');
+                }
+            } catch(e) {}
+        }
+    }
+
     // --- 4. WEBSOCKET (Temps réel) ---
     function initWebSocket() {
         if(socket) return; // Évite de connecter deux fois
@@ -492,6 +554,7 @@
         loadPlugs();
         initWebSocket();
         initPayPal();
+        checkStripeReturn(); // <--- NOUVEAU: Lance la vérification s'il revient d'un paiement
     }
 </script>
 

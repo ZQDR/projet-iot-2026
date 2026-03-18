@@ -9,4 +9,10 @@ router.post('/create-order', authMiddleware, paymentController.createPayPalOrder
 // POST /api/payment/capture-order
 router.post('/capture-order', authMiddleware, paymentController.capturePayPalOrder);
 
+// POST /api/payment/create-stripe-session
+router.post('/create-stripe-session', authMiddleware, paymentController.createStripeSession);
+
+// POST /api/payment/verify-stripe-session
+router.post('/verify-stripe-session', authMiddleware, paymentController.verifyStripeSession);
+
 module.exports = router;
