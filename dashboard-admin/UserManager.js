@@ -20,8 +20,11 @@ class UserManager {
 
     initSocket() {
         if (typeof io !== 'undefined') {
-            const socketUrl = this.apiUrl.replace('/api', '');
-            this.socket = io(socketUrl, { path: "/api/socket.io" });
+            if (!window.appSocket) {
+                const socketUrl = this.apiUrl.replace('/api', '');
+                window.appSocket = io(socketUrl, { path: "/api/socket.io", transports: ['websocket', 'polling'] });
+            }
+            this.socket = window.appSocket;
             
             // Mettre à jour le solde en direct dans la liste des utilisateurs
             this.socket.on('live_consumption', (data) => {

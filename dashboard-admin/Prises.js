@@ -47,13 +47,13 @@ class PriseManager {
     initSocket() {
         // On suppose que socket.io est chargé globalement via le script HTML
         if (typeof io !== 'undefined') {
-            // Connexion à la racine du serveur (là où tourne l'API)
-            const socketUrl = this.apiUrl.replace('/api', ''); 
-            this.socket = io(socketUrl, {
-                path: "/api/socket.io" // On se connecte au chemin spécifique
-            });
+            if (!window.appSocket) {
+                const socketUrl = this.apiUrl.replace('/api', '');
+                window.appSocket = io(socketUrl, { path: "/api/socket.io", transports: ['websocket', 'polling'] });
+            }
+            this.socket = window.appSocket;
 
-            console.log("📡 Initialisation WebSocket sur", socketUrl);
+            console.log("📡 Écoute WebSocket initialisée pour les prises");
             
             // DEBUG : Vérifier la connexion
             this.socket.on('connect', () => console.log("✅ WebSocket connecté avec ID:", this.socket.id));

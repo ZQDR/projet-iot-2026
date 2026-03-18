@@ -16,8 +16,11 @@ class NotificationManager {
 
     initSocket() {
         if (typeof io !== 'undefined') {
-            const socketUrl = this.apiUrl.replace('/api', '');
-            this.socket = io(socketUrl, { path: "/api/socket.io" });
+            if (!window.appSocket) {
+                const socketUrl = this.apiUrl.replace('/api', '');
+                window.appSocket = io(socketUrl, { path: "/api/socket.io", transports: ['websocket', 'polling'] });
+            }
+            this.socket = window.appSocket;
             
             // Dès qu'une prise passe en 'hs' (ou en 'libre'), on rafraîchit les alertes
             this.socket.on('status_update', () => this.fetchAlerts());

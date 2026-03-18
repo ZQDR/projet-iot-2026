@@ -37,10 +37,11 @@ class ConsumptionGraph{
 
     initSocket() {
         if (typeof io !== 'undefined') {
-            const socketUrl = this.apiUrl.replace('/api', '');
-            this.socket = io(socketUrl, {
-                path: "/api/socket.io"
-            });
+            if (!window.appSocket) {
+                const socketUrl = this.apiUrl.replace('/api', '');
+                window.appSocket = io(socketUrl, { path: "/api/socket.io", transports: ['websocket', 'polling'] });
+            }
+            this.socket = window.appSocket;
 
             this.socket.on('user_data_updated', (data) => {
                 // On vérifie si un utilisateur est sélectionné ET si c'est le bon

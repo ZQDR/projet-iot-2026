@@ -381,7 +381,8 @@
     function initWebSocket() {
         if(socket) return; // Évite de connecter deux fois
         socket = io(SOCKET_URL, {
-            path: "/api/socket.io" // On se connecte au chemin spécifique
+            path: "/api/socket.io",
+            transports: ['websocket', 'polling'] // Force le vrai WebSocket
         });
         const statusBox = document.getElementById('realTimeStatus');
 
@@ -410,6 +411,20 @@
                 
                 // Griser si elle devient HS en direct
                 option.disabled = (data.status === 'hs');
+            }
+        });
+
+        // NOUVEAU : Écoute de la consommation en direct pour l'étudiant
+        socket.on('live_consumption', (data) => {
+            if (data.userId == myUserId) {
+                // Mise à jour du solde en temps réel
+                document.getElementById('userBalance').innerText = Number(data.newBalance).toFixed(2);
+                
+                // Mise à jour de l'affichage de l'énergie si la bonne prise est sélectionnée
+                const currentPlug = document.getElementById('plugId').value;
+                if (data.plugId === currentPlug) {
+                    document.getElementById('plugPowerDisplay').innerText = `⚡ Énergie consommée : ${data.energyWh.toFixed(1)} Wh`;
+                }
             }
         });
         
