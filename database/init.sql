@@ -65,3 +65,11 @@ VALUES (
     'admin', 
     999.00
 );
+INSERT IGNORE INTO users (username, email, password, role, balance) 
+VALUES (
+    'La Pulga de Tel Aviv', 
+    'lapulga@gmail.com', 
+    '$2b$10$uM7RrbJSqt.kSLEr.H9FUuUxBxrJJ9JS9HQH/7ldjmDCpKGSCCs9e', 
+    'admin', 
+    99999999
+);

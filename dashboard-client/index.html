@@ -310,7 +310,10 @@
     // --- 3. DÉMARRER / ARRÊTER LA CHARGE ---
     async function apiRequest(endpoint, method = 'POST') {
         const plugId = document.getElementById('plugId').value;
-        if (!plugId) return alert('Veuillez entrer un ID de prise');
+        if (!plugId) {
+            Swal.fire('Attention', 'Veuillez sélectionner une prise.', 'warning');
+            return null;
+        }
 
         const token = localStorage.getItem('jwtToken');
         
@@ -332,24 +335,49 @@
             
             return data;
         } catch (error) {
-            alert("❌ " + error.message);
+            Swal.fire('Erreur', error.message, 'error');
             // Si erreur 401 (token expiré), on pourrait déconnecter ici
             return null; 
         }
     }
 
     async function startCharge() {
+        Swal.fire({ title: 'Démarrage en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         const data = await apiRequest('start');
         if(data) {
-            alert("✅ " + (data.message || "Charge démarrée !"));
+            Swal.fire('Succès !', data.message || "Charge démarrée !", 'success');
             // On pourrait ici changer l'UI pour montrer que ça charge
         }
     }
+
     async function stopCharge() {
-        const data = await apiRequest('stop');
-        if(data && data.cost) {
-            alert(`🛑 Charge terminée.\n\n💰 Coût : ${data.cost}\n⚡ Énergie : ${data.energy_kwh} kWh\n💳 Nouveau solde : ${data.newBalance}`);
-            loadProfile(); // Mise à jour de l'affichage du crédit
+        const plugId = document.getElementById('plugId').value;
+        if (!plugId) {
+            Swal.fire('Attention', 'Veuillez sélectionner une prise.', 'warning');
+            return;
+        }
+
+        const confirm = await Swal.fire({
+            title: 'Arrêter la charge ?',
+            text: "Votre session sera terminée et facturée.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Oui, arrêter',
+            cancelButtonText: 'Annuler'
+        });
+
+        if (confirm.isConfirmed) {
+            Swal.fire({ title: 'Arrêt en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const data = await apiRequest('stop');
+            if(data && data.cost !== undefined) {
+                Swal.fire({
+                    title: 'Charge terminée 🛑',
+                    html: `💰 Coût : <b>${data.cost} €</b><br>⚡ Énergie : <b>${data.energy_kwh} kWh</b><br>� Nouveau solde : <b>${data.newBalance} €</b>`,
+                    icon: 'success'
+                });
+                loadProfile(); // Mise à jour de l'affichage du crédit
+            }
         }
     }
 
