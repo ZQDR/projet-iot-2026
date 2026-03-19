@@ -121,6 +121,7 @@ class PriseManager {
 
             // 1. Mise à jour de la puissance ou de l'état
             this.socket.on('power_update', (data) => this.updateRowUI(data.plugId, { power: data.power }));
+            this.socket.on('voltage_update', (data) => this.updateRowUI(data.plugId, { voltage: data.voltage }));
             this.socket.on('state_update', (data) => this.updateRowUI(data.plugId, { state: data.state }));
             this.socket.on('status_update', (data) => {
                 this.updateRowUI(data.plugId, { status: data.status, username: data.username });
@@ -226,6 +227,7 @@ class PriseManager {
             // 1. Mise à jour des données en mémoire (data-attributes)
             if (data.state !== undefined) row.dataset.state = data.state;
             if (data.power !== undefined) row.dataset.power = data.power;
+            if (data.voltage !== undefined) row.dataset.voltage = data.voltage;
             if (data.status !== undefined) row.dataset.status = data.status;
             if (data.energyWh !== undefined) row.dataset.energyWh = data.energyWh;
             if (data.cost !== undefined) row.dataset.cost = data.cost;
@@ -243,6 +245,7 @@ class PriseManager {
             const rawState = row.dataset.state;
             const currentState = rawState === "true" || rawState === true || rawState === "1" || rawState == 1;
             const currentPower = row.dataset.power || 0;
+            const currentVoltage = row.dataset.voltage || 0;
             const currentEnergy = parseFloat(row.dataset.energyWh) || 0;
             const currentCost = parseFloat(row.dataset.cost) || 0;
             const currentUsername = row.dataset.username || "";
@@ -261,6 +264,11 @@ class PriseManager {
                     htmlContent = `Occupée par <span class="clickable-username" data-username="${currentUsername}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${currentUsername}">${currentUsername}</span> (${textState})`;
                 } else {
                     htmlContent = `${displayStatus} (${textState})`;
+                }
+                
+                // Si on a la tension (voltage), on l'ajoute à l'affichage
+                if (currentState && currentVoltage > 0) {
+                    htmlContent += ` (${currentVoltage} V)`;
                 }
 
                 // Si c'est allumé et qu'on a de la puissance, on l'affiche

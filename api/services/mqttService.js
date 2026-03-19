@@ -124,6 +124,7 @@ const mqttService = {
 
                     if (plugData.voltage !== undefined) {
                         await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [plugData.voltage, plugId]);
+                        socketService.emit('voltage_update', { plugId, voltage: plugData.voltage });
                     }
                 }
 
