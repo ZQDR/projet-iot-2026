@@ -136,6 +136,20 @@ class PriseManager {
                 console.log("Nouvelle prise détectée, rechargement...");
                 this.loadPrises();
             });
+            
+            // 3. Alerte Administrateur Globale (Surcharge, etc.)
+            this.socket.on('admin_alert', (data) => {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'warning',
+                    title: 'Alerte Prise',
+                    text: data.message,
+                    showConfirmButton: false,
+                    timer: 8000,
+                    timerProgressBar: true
+                });
+            });
         } else {
             console.warn("Socket.io non chargé. Le temps réel est désactivé.");
         }

@@ -75,6 +75,7 @@ const mqttService = {
                 let currentPower = undefined;
                 let energyVal = undefined;
                 let ison = undefined;
+                let isOverpower = false; // <-- NOUVEAU
 
                 // --- CAS A : Valeurs brutes (Gen 1) ---
                 const subTopic = topicParts[topicParts.length - 1];
@@ -83,6 +84,9 @@ const mqttService = {
                 else if (type === 'relay' && topicParts.length === 4) {
                     if (payload === 'on') ison = true;
                     if (payload === 'off') ison = false;
+                    if (payload === 'overpower') isOverpower = true;
+                } else if (subTopic === 'overpower') {
+                    isOverpower = (payload === '1' || payload === 'true');
                 }
 
                 // --- CAS B : Valeurs JSON complexes (Gen 1 & Gen 2) ---
@@ -90,13 +94,24 @@ const mqttService = {
                 try { plugData = JSON.parse(payload); } catch (e) { /* Ne plante pas si ce n'est pas du JSON */ }
                 
                 if (plugData && typeof plugData === 'object') {
+                    // --- NOUVEAU : Détection Surcharge Gen 2 via Events ---
+                    if (plugData.method === 'NotifyEvent' && plugData.params && Array.isArray(plugData.params.events)) {
+                        for (let evt of plugData.params.events) {
+                            if (evt.event === 'overpower' || evt.event === 'overpower_error') isOverpower = true;
+                        }
+                    }
+
                     // Normalisation Gen 2
                     if (plugData.method === 'NotifyStatus' && plugData.params && plugData.params['switch:0']) {
-                        plugData = plugData.params['switch:0'];
+                        const switchData = plugData.params['switch:0'];
+                        if (switchData.errors && switchData.errors.includes('overpower')) isOverpower = true;
+                        plugData = switchData;
                     }
 
                     if (plugData.power !== undefined) currentPower = plugData.power;
                     else if (plugData.apower !== undefined) currentPower = plugData.apower;
+
+                    if (plugData.overpower) isOverpower = true; // Gen 1 JSON
 
                     if (plugData.energy !== undefined) energyVal = plugData.energy / 60;
                     else if (plugData.total !== undefined) energyVal = plugData.total;
@@ -113,6 +128,59 @@ const mqttService = {
                 }
 
                 // --- EMISSION DES DONNEES ---
+                
+                // --- TRAITEMENT DE LA SURCHARGE (OVERPOWER) ---
+                if (isOverpower) {
+                    console.log(`⚠️ [ALERTE] Surcharge de puissance détectée sur la prise ${plugId} !`);
+                    
+                    try {
+                        const [sessions] = await db.execute('SELECT id, user_id, index_start FROM consumption WHERE plug_id = ? AND end_time IS NULL', [plugId]);
+                        if (sessions.length > 0) {
+                            const activeSession = sessions[0];
+                            const userId = activeSession.user_id;
+                            
+                            // Calcul de facturation
+                            const [plugs] = await db.execute('SELECT last_index FROM plugs WHERE id = ?', [plugId]);
+                            const lastIndex = (energyVal !== undefined) ? energyVal : (parseFloat(plugs[0].last_index) || 0);
+                            let currentEnergyWh = Math.max(0, lastIndex - (parseFloat(activeSession.index_start) || 0));
+                            const energyKwh = currentEnergyWh / 1000;
+                            let currentCost = energyKwh * 0.2516;
+
+                            // Paiement
+                            const [users] = await db.execute('SELECT balance FROM users WHERE id = ?', [userId]);
+                            if (users.length > 0) {
+                                let newBalance = Math.max(0, parseFloat(users[0].balance) - currentCost);
+                                await db.execute('UPDATE users SET balance = ? WHERE id = ?', [newBalance, userId]);
+                                await db.execute('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'payment', -currentCost, `Arrêt auto sur ${plugId} (Surcharge de puissance)`]);
+                            }
+
+                            // Clôture
+                            await db.execute('UPDATE consumption SET end_time = NOW(), energy_kwh = ?, cost = ? WHERE id = ?', [energyKwh, currentCost, activeSession.id]);
+                            await db.execute('UPDATE plugs SET status = "libre", state = 0 WHERE id = ?', [plugId]);
+                            mqttService.turnOff(plugId);
+
+                            // Notifier l'App de Mehdi
+                            socketService.emit('status_update', { plugId: plugId, status: 'libre' });
+                            socketService.emit('user_data_updated', { userId: userId });
+                            socketService.emit('session_auto_stopped', {
+                                userId: userId,
+                                plugId: plugId,
+                                reason: 'surcharge_puissance',
+                                message: "⚠️ Surcharge de puissance ! L'appareil branché dépasse la limite autorisée. La prise a été coupée par sécurité."
+                            });
+                        }
+
+                        // Notifier l'Admin (Dashboard)
+                        socketService.emit('admin_alert', {
+                            plugId: plugId,
+                            message: `Surcharge de puissance détectée sur la prise ${plugId}. La session a été interrompue.`
+                        });
+
+                    } catch (err) {
+                        console.error(`Erreur lors du traitement de la surcharge pour ${plugId}:`, err);
+                    }
+                }
+
                 if (currentPower !== undefined) {
                     socketService.emit('power_update', { plugId, power: currentPower });
                 }
