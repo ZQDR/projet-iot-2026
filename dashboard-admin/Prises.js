@@ -114,7 +114,7 @@ class PriseManager {
             this.socket.on('connect', () => console.log("✅ WebSocket connecté avec ID:", this.socket.id));
             this.socket.on('connect_error', (err) => console.error("❌ Erreur connexion WebSocket:", err));
 
-            // 📡 ÉCOUTE ABSOLUE : Affiche TOUS les messages reçus du serveur
+            // 📢 ÉCOUTE ABSOLUE : Affiche TOUS les messages reçus du serveur
             this.socket.onAny((eventName, ...args) => {
                 console.log(`📥 [SOCKET REÇU] Événement: ${eventName}`, args);
             });
@@ -135,20 +135,6 @@ class PriseManager {
             this.socket.on('new_plug_added', () => {
                 console.log("Nouvelle prise détectée, rechargement...");
                 this.loadPrises();
-            });
-            
-            // 3. Alerte Administrateur Globale (Surcharge, etc.)
-            this.socket.on('admin_alert', (data) => {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'warning',
-                    title: 'Alerte Prise',
-                    text: data.message,
-                    showConfirmButton: false,
-                    timer: 8000,
-                    timerProgressBar: true
-                });
             });
         } else {
             console.warn("Socket.io non chargé. Le temps réel est désactivé.");
@@ -284,7 +270,7 @@ class PriseManager {
                 
                 // Si la prise est occupée, on ajoute l'énergie et le coût accumulés
                 if (rawStatus === 'occupied' && currentEnergy > 0) {
-                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(4)} €`;
+                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(2)} €`;
                 }
 
                 cellState.innerHTML = htmlContent;

@@ -5,7 +5,7 @@ class ConsumptionGraph{
         this.chart=null;
         this.socket = null;
         
-        // SÉCURITÉ DOM : Attendre que le HTML soit chargé pour trouver <canvas> et <ul>
+        // SÃ‰CURITÃ‰ DOM : Attendre que le HTML soit chargÃ© pour trouver <canvas> et <ul>
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => this.init());
         } else {
@@ -20,7 +20,7 @@ class ConsumptionGraph{
         if (canvas && userList) {
             this.ctx = canvas.getContext("2d");
             
-            // Délégation d'événement sur la liste des utilisateurs
+            // DÃ©lÃ©gation d'Ã©vÃ©nement sur la liste des utilisateurs
             userList.addEventListener("click", (event) => {
                 const li = event.target.closest("li");
                 if (li && li.dataset.id) {
@@ -31,7 +31,7 @@ class ConsumptionGraph{
 
             this.initSocket();
         } else {
-            console.warn("Graph.js : Éléments 'consoChart' ou 'userList' introuvables.");
+            console.warn("Graph.js : Ã‰lÃ©ments 'consoChart' ou 'userList' introuvables.");
         }
     }
 
@@ -44,30 +44,30 @@ class ConsumptionGraph{
             this.socket = window.appSocket;
 
             this.socket.on('user_data_updated', (data) => {
-                // On vérifie si un utilisateur est sélectionné ET si c'est le bon
+                // On vÃ©rifie si un utilisateur est sÃ©lectionnÃ© ET si c'est le bon
                 if (this.userManager && this.userManager.selectedUserId && this.userManager.selectedUserId == data.userId) {
-                    console.log(`📊 Mise à jour du graphique pour l'utilisateur ${data.userId}...`);
+                    console.log(`ðŸ“Š Mise Ã  jour du graphique pour l'utilisateur ${data.userId}...`);
                     this.loadUserConsumption(data.userId);
                 }
             });
 
-            // NOUVEAU : Écoute de l'énergie en temps réel
+            // NOUVEAU : Ã‰coute de l'Ã©nergie en temps rÃ©el
             this.socket.on('live_consumption', (data) => {
-                console.log(`⚡ [WS] live_consumption reçu :`, data);
+                console.log(`âš¡ [WS] live_consumption reÃ§u :`, data);
 
                 if (this.userManager && this.userManager.selectedUserId == data.userId) {
-                    // On met à jour uniquement le dernier point du graphique si l'ID de session correspond
+                    // On met Ã  jour uniquement le dernier point du graphique si l'ID de session correspond
                     if (this.chart && this.lastSessionId == data.sessionId) {
-                        console.log(`📈 Mise à jour du graphique en direct : ${data.energyWh} Wh`);
+                        console.log(`ðŸ“ˆ Mise Ã  jour du graphique en direct : ${data.energyWh} Wh`);
                         const dataArray = this.chart.data.datasets[0].data;
                         dataArray[dataArray.length - 1] = data.energyWh;
                         this.chart.update(); // FORCE LA MISE A JOUR VISUELLE
                     } else {
-                        console.log(`⚠️ Ignoré : Session Actuelle (${this.lastSessionId}) != Session Reçue (${data.sessionId})`);
+                        console.log(`âš ï¸ IgnorÃ© : Session Actuelle (${this.lastSessionId}) != Session ReÃ§ue (${data.sessionId})`);
                     }
                 } else {
                     const currentId = this.userManager ? this.userManager.selectedUserId : 'Aucun';
-                    console.log(`⚠️ Ignoré : User Actuel (${currentId}) != User Reçu (${data.userId})`);
+                    console.log(`âš ï¸ IgnorÃ© : User Actuel (${currentId}) != User ReÃ§u (${data.userId})`);
                 }
             });
         }
@@ -75,7 +75,7 @@ class ConsumptionGraph{
 
     async loadUserConsumption(userId){
         try{
-            // On vérifie le token avant d'appeler
+            // On vÃ©rifie le token avant d'appeler
             if (!this.userManager.token) {
                 const logged = await this.userManager.loginAdmin();
                 if (!logged) return; // Si l'utilisateur annule
@@ -89,10 +89,10 @@ class ConsumptionGraph{
             if (!response.ok) {
                 console.error("Erreur API Graphique :", response.status);
                 if (response.status === 401 || response.status === 403) {
-                    Swal.fire('Erreur', 'Session expirée. Veuillez recharger la page.', 'error');
+                    Swal.fire('Erreur', 'Session expirÃ©e. Veuillez recharger la page.', 'error');
                 } else {
-                    // On affiche le code d'erreur pour aider au débogage
-                    Swal.fire('Erreur', `Impossible de récupérer l'historique. (Erreur ${response.status})`, 'error');
+                    // On affiche le code d'erreur pour aider au dÃ©bogage
+                    Swal.fire('Erreur', `Impossible de rÃ©cupÃ©rer l'historique. (Erreur ${response.status})`, 'error');
                 }
                 return;
             }
@@ -101,13 +101,13 @@ class ConsumptionGraph{
             // L'API renvoie maintenant { history: [], transactions: [], user: {} }
             const data = responseData.history !== undefined ? responseData.history : responseData;
 
-            // Transformation des données (Array d'objets SQL -> Arrays pour Chart.js)
+            // Transformation des donnÃ©es (Array d'objets SQL -> Arrays pour Chart.js)
             // On suppose que data est un tableau : [{ start_time: "...", energy_kwh: 0.5 }, ...]
             const dates = [];
             const values = [];
 
             if (Array.isArray(data)) {
-                // On enregistre l'ID de la dernière session pour la mise à jour en temps réel
+                // On enregistre l'ID de la derniÃ¨re session pour la mise Ã  jour en temps rÃ©el
                 this.lastSessionId = null;
                 const reversedData = [...data].reverse();
                 
@@ -123,7 +123,7 @@ class ConsumptionGraph{
                     
                     dates.push(formattedDate);
                     
-                    // Conversion kWh -> Wh pour plus de lisibilité
+                    // Conversion kWh -> Wh pour plus de lisibilitÃ©
                     const energyWh = (session.energy_kwh || 0) * 1000; 
                     values.push(energyWh);
                 });
@@ -138,7 +138,7 @@ class ConsumptionGraph{
 
     updateGraph(labels,values){
         if (typeof Chart === 'undefined') {
-            console.error("La librairie Chart.js n'est pas chargée !");
+            console.error("La librairie Chart.js n'est pas chargÃ©e !");
             return;
         }
 
@@ -159,7 +159,7 @@ class ConsumptionGraph{
             },
             options:{
                 responsive:true,
-                maintainAspectRatio: true, // On garde les proportions pour éviter qu'il ne s'étire trop
+                maintainAspectRatio: true, // On garde les proportions pour Ã©viter qu'il ne s'Ã©tire trop
                 aspectRatio: 2, // Format rectangulaire standard (2x plus large que haut)
                 scales:{y:{beginAtZero:true}}
             }

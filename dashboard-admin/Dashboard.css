@@ -67,10 +67,11 @@ body {
    PANNEAU DROIT (MAIN)
    ========================================== */
 .right-panel {
-    display: grid;
-    grid-template-rows: 1.2fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 25px;
     height: calc(100vh - 50px);
+    overflow-y: auto; /* Permet au panneau de défiler si le graph est grand, sans le couper */
 }
 
 /* ==========================================
@@ -84,6 +85,7 @@ body {
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(0,0,0,0.03);
+    overflow: hidden;
 }
 
 .box-header {
@@ -98,6 +100,22 @@ body {
     margin: 0;
     color: var(--primary-color);
     font-weight: 600;
+}
+
+.scroll-content {
+    overflow-y: auto;
+    max-height: 130px; /* En-tête + 2 alertes env. */
+}
+
+/* --- CORRECTIF GRAPHIQUE --- */
+/* Empêche le graphique d'être écrasé par le flexbox : il gardera sa taille et poussera le reste vers le bas */
+.analyse-consommation {
+    flex-shrink: 0;
+}
+
+.chart-container {
+    position: relative;
+    width: 100%;
 }
 
 /* ==========================================
@@ -122,8 +140,8 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex-grow: 1;
     overflow-y: auto;
+    max-height: 200px; /* 4 utilisateurs env. */
 }
 
 #userList li {
@@ -174,7 +192,7 @@ body {
    ========================================== */
 .table-wrapper {
     overflow-y: auto;
-    flex-grow: 1;
+    max-height: 160px; /* En-tête + 2 équipements env. */
 }
 
 table {
@@ -197,7 +215,7 @@ td {
 }
 
 /* ==========================================
-   SCROLLBAR PERSONNALISÉE
+   SCROLLBAR PERSONNALISÃ‰E
    ========================================== */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;

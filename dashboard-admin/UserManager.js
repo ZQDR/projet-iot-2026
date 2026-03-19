@@ -172,23 +172,23 @@ class UserManager {
             });
 
             if (response.ok) {
-    Swal.fire('Supprimé !', 'L\'utilisateur a été supprimé.', 'success');
-    this.selectedUserId = null;
-    this.fetchAllUsers(); // Rafraîchir la liste
-} else {
-    let message;
-    try {
-        // On parse la réponse de l'API pour récupérer les données de l'erreur
-        const errorData = await response.json();
-        message = errorData.message || "Erreur lors de la suppression";
-    } catch (e) {
-        // Si l'API renvoie du texte brut ou rien du tout, on tombe ici et on garde le message par défaut
-        console.error("Erreur lors de la lecture de la réponse de l'API", e);
-    }
+                Swal.fire('Supprimé !', 'L\'utilisateur a été supprimé.', 'success');
+                this.selectedUserId = null;
+                this.fetchAllUsers(); // Rafraîchir la liste
+            } else {
+                let message;
+                try {
+                    // On parse la réponse de l'API pour récupérer les données de l'erreur
+                    const errorData = await response.json();
+                    message = errorData.message || "Erreur lors de la suppression";
+                } catch (e) {
+                    // Si l'API renvoie du texte brut ou rien du tout, on tombe ici et on garde le message par défaut
+                    console.error("Erreur lors de la lecture de la réponse de l'API", e);
+                }
 
-    // On affiche l'erreur dans SweetAlert
-    Swal.fire('Erreur', message, 'error');
-}
+                // On affiche l'erreur dans SweetAlert
+                Swal.fire('Erreur', message, 'error');
+            }
         } catch (error) {
             console.error("Erreur suppression:", error);
         }
@@ -198,7 +198,7 @@ class UserManager {
         // 1. Si on n'a pas de token, on se connecte d'abord
         if (!this.token) await this.loginAdmin();
 
-       const username = firstName + " " + lastName;
+        const username = firstName + " " + lastName;
         const payload = { username, email, password, balance: creditAmount };
 
         try {
@@ -379,7 +379,7 @@ class UserManager {
                         <p style="margin: 5px 0;">📧 <b>Email:</b> ${user.email}</p>
                         <p style="margin: 5px 0;">💰 <b>Solde actuel:</b> <span style="color:#2980b9; font-weight:bold;">${parseFloat(user.balance).toFixed(2)}€</span></p>
                         <p style="margin: 5px 0;">📅 <b>Inscrit le:</b> ${dateInscr}</p>
-                        <p style="margin: 5px 0; color: #7f8c8d;" title="${user.password}">🔑 <b>Mot de passe:</b> Hashé et sécurisé en BDD (Survolez pour voir le hash)</p>
+                        <p style="margin: 5px 0; color: #7f8c8d;" title="${user.password}">🔑 <b>Mot de passe:</b> Haché et sécurisé en BDD (Survolez pour voir le hash)</p>
                     </div>
                     <h4 style="margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #3498db; display: inline-block;">Dernières Transactions</h4>
                     <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px;">
