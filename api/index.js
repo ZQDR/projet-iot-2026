@@ -32,7 +32,7 @@ mqttService.connect();      // Connexion au broker MQTT HiveMQ
 app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/plugs', '/plugs'], plugRoutes);
 app.use(['/api/consumption', '/consumption'], consumptionRoutes);
-app.use(['/api/payment', '/payment'], paymentRoutes);
+app.use(['/api/payments', '/payments'], paymentRoutes);
 
 // Route de test (Ping)
 app.get('/', (req, res) => {
