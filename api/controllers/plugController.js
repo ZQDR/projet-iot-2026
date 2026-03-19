@@ -69,14 +69,9 @@ exports.stopCharge = async (req, res) => {
         if (realEnergyWh < 0) realEnergyWh = 0; // Sécurité si reset compteur
         const energyKwh = realEnergyWh / 1000;
         
-        // Calcul du prix (ex: 0.50€ / kWh)
-        const PRICE_PER_KWH = 0.50;
+        // Calcul du prix basé sur le tarif réglementé en France (~0.2516€ / kWh)
+        const PRICE_PER_KWH = 0.2516;
         let cost = energyKwh * PRICE_PER_KWH;
-
-        // --- FORFAIT DE CONNEXION / COÛT MINIMUM ---
-        // Si l'utilisateur a démarré la prise, on facture au moins 0.05€ même si la conso est nulle
-        // Cela évite l'impression que le système est cassé lors des petits tests
-        if (cost < 0.05) cost = 0.05;
 
         // 2. Paiement
         const user = await UserModel.findById(userId);
@@ -212,7 +207,7 @@ exports.forceStopCharge = async (req, res) => {
             const startIndex = parseFloat(session.index_start) || 0;
             let realEnergyWh = Math.max(0, currentIndex - startIndex);
             const energyKwh = realEnergyWh / 1000;
-            let cost = Math.max(0.05, energyKwh * 0.50); // Minimum 5 centimes
+            let cost = energyKwh * 0.2516; // Prix du kWh en France
 
             const user = await UserModel.findById(userId);
             const newBalance = Math.max(0, parseFloat(user.balance) - cost);
@@ -261,7 +256,7 @@ exports.toggleMaintenance = async (req, res) => {
                 let realEnergyWh = Math.max(0, currentIndex - startIndex);
                 const energyKwh = realEnergyWh / 1000;
                 
-                let cost = Math.max(0.05, energyKwh * 0.50); // Minimum 5 centimes
+                let cost = energyKwh * 0.2516; // Prix du kWh en France
 
                 const user = await UserModel.findById(userId);
                 const newBalance = Math.max(0, parseFloat(user.balance) - cost);

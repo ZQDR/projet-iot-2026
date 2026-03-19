@@ -132,7 +132,7 @@ const mqttService = {
                             if (currentEnergyWh < 0) currentEnergyWh = 0;
                             
                             const energyKwh = currentEnergyWh / 1000;
-                            let currentCost = Math.max(0.05, energyKwh * 0.50); // Calcul du coût réel (minimum 5 centimes)
+                            let currentCost = energyKwh * 0.2516; // Calcul du coût réel basé sur le kWh en France
 
                             // Récupération du solde initial de l'utilisateur
                             const [users] = await db.execute('SELECT username, balance FROM users WHERE id = ?', [userId]);
