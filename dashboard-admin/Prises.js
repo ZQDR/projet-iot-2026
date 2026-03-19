@@ -270,7 +270,7 @@ class PriseManager {
                 
                 // Si la prise est occupée, on ajoute l'énergie et le coût accumulés
                 if (rawStatus === 'occupied' && currentEnergy > 0) {
-                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(2)} €`;
+                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(4)} €`;
                 }
 
                 cellState.innerHTML = htmlContent;
