@@ -111,7 +111,14 @@ exports.createStripeSession = async (req, res) => {
 
         // Définition de l'URL de retour : 
         // Priorité 1: Mobile (returnUrl) | Priorité 2: Web (origin) | Priorité 3: Fallback serveur
-        const baseUrl = returnUrl || req.headers.origin || 'https://recharge.cielnewton.fr';
+        let baseUrl = returnUrl || req.headers.origin || 'https://recharge.cielnewton.fr';
+
+        // SÉCURITÉ : Stripe exige une URL absolue (doit contenir "://").
+        // Si le front-end envoie "localhost:3000" sans "http://" ou la string "null", on le corrige.
+        if (baseUrl === 'null' || baseUrl === 'undefined' || !baseUrl.includes('://')) {
+            console.warn(`[Stripe] URL invalide reçue du client (${baseUrl}), utilisation de l'URL de secours.`);
+            baseUrl = 'https://recharge.cielnewton.fr';
+        }
 
         // On demande à Stripe de créer une page de paiement temporaire
         const session = await stripe.checkout.sessions.create({
