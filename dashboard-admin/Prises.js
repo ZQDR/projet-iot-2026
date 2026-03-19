@@ -192,6 +192,7 @@ class PriseManager {
                 // 1. Envoi configuration MQTT (On le fait en premier avant que le Wi-Fi ne coupe la connexion)
                 await fetch('http://192.168.33.1/rpc/Mqtt.SetConfig', {
                     method: 'POST',
+                    mode: 'no-cors', // Empêche le navigateur de bloquer la requête pour des raisons de CORS
                     body: JSON.stringify({
                         config: { server: formValues.mqttServer, user: formValues.mqttUser, pass: formValues.mqttPass, enable: true }
                     })
@@ -201,6 +202,7 @@ class PriseManager {
                 // On n'attend pas la réponse finale (await) car la prise va redémarrer son antenne Wi-Fi et couper notre connexion
                 fetch('http://192.168.33.1/rpc/Wifi.SetConfig', {
                     method: 'POST',
+                    mode: 'no-cors',
                     body: JSON.stringify({
                         config: { sta1: { ssid: formValues.wifiSsid, pass: formValues.wifiPass, enable: true } }
                     })
@@ -213,7 +215,12 @@ class PriseManager {
                 });
             } catch (e) {
                 console.error(e);
-                Swal.fire('Erreur de connexion', 'Impossible de contacter la prise. Êtes-vous bien connecté au réseau "ShellyPlusPlugS-..." ?', 'error');
+                // Détection intelligente de l'erreur
+                if (window.location.protocol === 'https:') {
+                    Swal.fire('Blocage de sécurité 🔒', "Votre navigateur refuse d'envoyer les données à la prise car votre tableau de bord est sécurisé (HTTPS), mais la prise locale ne l'est pas (HTTP).<br><br><b>Solution :</b><br>Ouvrez votre tableau de bord en utilisant <b>http://</b> (sans le 's'), ou configurez la prise manuellement en allant sur http://192.168.33.1 dans un nouvel onglet.", 'error');
+                } else {
+                    Swal.fire('Erreur de connexion', 'Impossible de contacter la prise (192.168.33.1).<br><br>Êtes-vous bien connecté au réseau "ShellyPlusPlugS-..." ?<br><b>Astuce :</b> Si vous avez un câble Ethernet, débranchez-le temporairement.', 'error');
+                }
             }
         }
     }
