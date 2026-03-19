@@ -214,13 +214,30 @@ class PriseManager {
                     text: "La prise va redémarrer. Veuillez reconnecter votre ordinateur au Wi-Fi habituel. Dès que la prise aura accès à Internet, elle apparaîtra toute seule dans cette liste !"
                 });
             } catch (e) {
-                console.error(e);
-                // Détection intelligente de l'erreur
-                if (window.location.protocol === 'https:') {
-                    Swal.fire('Blocage de sécurité 🔒', "Votre navigateur refuse d'envoyer les données à la prise car votre tableau de bord est sécurisé (HTTPS), mais la prise locale ne l'est pas (HTTP).<br><br><b>Solution :</b><br>Ouvrez votre tableau de bord en utilisant <b>http://</b> (sans le 's'), ou configurez la prise manuellement en allant sur http://192.168.33.1 dans un nouvel onglet.", 'error');
-                } else {
-                    Swal.fire('Erreur de connexion', 'Impossible de contacter la prise (192.168.33.1).<br><br>Êtes-vous bien connecté au réseau "ShellyPlusPlugS-..." ?<br><b>Astuce :</b> Si vous avez un câble Ethernet, débranchez-le temporairement.', 'error');
-                }
+                console.error("Erreur de communication avec la prise:", e);
+                
+                // Plan B : Le navigateur bloque l'envoi, on donne un bouton pour le faire manuellement
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Configuration auto bloquée',
+                    html: `
+                        <p style="text-align:left; font-size: 0.9em; margin-bottom:10px;">Votre navigateur (ou un câble réseau) bloque l'envoi automatique. <b>Ne vous inquiétez pas, vous pouvez le faire en un clic :</b></p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: left; font-size: 0.9em; border-left: 4px solid #3498db;">
+                            <b>1.</b> Cliquez sur le bouton ci-dessous pour ouvrir la prise.<br><br>
+                            <b>2.</b> Dans le menu <b>Wi-Fi</b>, connectez la prise au réseau : <b style="color:#d35400;">${formValues.wifiSsid}</b><br><br>
+                            <b>3.</b> Dans le menu <b>MQTT</b>, ajoutez le serveur : <b style="color:#d35400;">${formValues.mqttServer}</b>
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: '🌐 Ouvrir l\'interface de la prise',
+                    confirmButtonColor: '#3498db',
+                    cancelButtonText: 'Annuler'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Ouvre la page de la prise directement dans un nouvel onglet
+                        window.open('http://192.168.33.1', '_blank');
+                    }
+                });
             }
         }
     }
