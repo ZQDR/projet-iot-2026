@@ -98,7 +98,7 @@ exports.createStripeSession = async (req, res) => {
     try {
         if (!stripe) return res.status(500).json({ error: "Stripe n'est pas configuré sur le serveur (Clé manquante)." });
 
-        const { amount } = req.body;
+        const { amount, returnUrl } = req.body;
         if (!amount || isNaN(amount) || amount <= 0) {
             return res.status(400).json({ error: "Montant invalide." });
         }
@@ -108,6 +108,10 @@ exports.createStripeSession = async (req, res) => {
         if (parseFloat(user.balance) + parseFloat(amount) > 100) {
             return res.status(400).json({ error: "Le solde maximum autorisé est de 100€. Vous ne pouvez pas recharger ce montant." });
         }
+
+        // Définition de l'URL de retour : 
+        // Priorité 1: Mobile (returnUrl) | Priorité 2: Web (origin) | Priorité 3: Fallback serveur
+        const baseUrl = returnUrl || req.headers.origin || 'https://recharge.cielnewton.fr';
 
         // On demande à Stripe de créer une page de paiement temporaire
         const session = await stripe.checkout.sessions.create({
@@ -125,15 +129,16 @@ exports.createStripeSession = async (req, res) => {
             }],
             mode: 'payment',
             // Redirection vers le dashboard client après paiement
-            success_url: `${req.headers.origin}/?stripe_session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${req.headers.origin}/`,
+            success_url: `${baseUrl}/?stripe_session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${baseUrl}/`,
             client_reference_id: req.user.id.toString(), // On garde l'ID de l'élève en mémoire
         });
 
         res.json({ url: session.url });
     } catch (err) {
         console.error("Erreur Stripe Create:", err);
-        res.status(500).json({ error: "Erreur lors de l'initialisation du paiement." });
+        // On renvoie l'erreur exacte à l'application de Mehdi pour faciliter le débogage
+        res.status(500).json({ error: "Erreur d'initialisation : " + err.message });
     }
 };
 
