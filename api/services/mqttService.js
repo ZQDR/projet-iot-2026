@@ -80,6 +80,13 @@ const mqttService = {
                 // --- CAS A : Valeurs brutes (Gen 1) ---
                 const subTopic = topicParts[topicParts.length - 1];
                 if (subTopic === 'power') currentPower = parseFloat(payload);
+                else if (subTopic === 'voltage') {
+                    const v = parseFloat(payload);
+                    if (!isNaN(v)) {
+                        await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [v, plugId]);
+                        socketService.emit('voltage_update', { plugId, voltage: v });
+                    }
+                }
                 else if (subTopic === 'energy') energyVal = parseFloat(payload) / 60; // Wmin -> Wh
                 else if (type === 'relay' && topicParts.length === 4) {
                     if (payload === 'on') ison = true;
@@ -122,7 +129,7 @@ const mqttService = {
                     else if (plugData.output !== undefined) ison = (plugData.output === true);
                     else if (plugData.status !== undefined) ison = (plugData.status === 'on');
 
-                    if (plugData.voltage !== undefined) {
+                    if (plugData.voltage !== undefined && plugData.voltage !== null) {
                         await db.execute('UPDATE plugs SET voltage = ? WHERE id = ?', [plugData.voltage, plugId]);
                         socketService.emit('voltage_update', { plugId, voltage: plugData.voltage });
                     }
