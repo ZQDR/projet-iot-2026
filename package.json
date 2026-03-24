@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "api-iot": "file:api",
+    "expo-server-sdk": "^6.1.0",
     "express": "^5.2.1",
     "stripe": "^20.4.1"
   }
