@@ -4,6 +4,7 @@ const mqttConfig = require('../config/mqtt'); // On récupère ta config sécuri
 const socketService = require('./socketService'); // Lien vers le WebSocket
 const PlugModel = require('../models/plugModel'); // <-- On importe le modèle
 const db = require('../config/db');
+const pushService = require('./pushService'); // <-- Import du nouveau service de notifications
 
 let client = null;
 
@@ -176,6 +177,9 @@ const mqttService = {
                                 reason: 'surcharge_puissance',
                                 message: "⚠️ Surcharge de puissance ! L'appareil branché dépasse la limite autorisée. La prise a été coupée par sécurité."
                             });
+                            
+                            // Notification Push (App fermée)
+                            pushService.sendPushAlert(userId, '⚠️ Surcharge de puissance', "L'appareil branché dépasse la limite. La prise a été coupée par sécurité.");
                         }
 
                         // Notifier l'Admin (Dashboard)
@@ -254,6 +258,9 @@ const mqttService = {
                                         reason: 'solde_epuise',
                                         message: "Votre solde est épuisé. La session a été arrêtée automatiquement."
                                     });
+                                    
+                                    // Notification Push (App fermée)
+                                    pushService.sendPushAlert(userId, '💸 Solde épuisé', "Votre solde est à 0€. La session a été arrêtée automatiquement.");
                                 }
                             }
                         }

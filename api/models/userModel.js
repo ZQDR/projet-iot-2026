@@ -82,8 +82,15 @@ class UserModel {
     const sql = 'DELETE FROM users WHERE id = ?';
     const [result] = await db.execute(sql, [id]);
     return result.affectedRows > 0;
-}
     
+}
+
+    // Sauvegarder le token de notification Push (Expo)
+    static async savePushToken(id, token) {
+        const sql = 'UPDATE users SET expo_push_token = ? WHERE id = ?';
+        const [result] = await db.execute(sql, [token, id]);
+        return result.affectedRows > 0;
+    }
 }
 
 

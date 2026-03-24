@@ -231,3 +231,21 @@ exports.deleteUserById = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// SAUVEGARDE DU TOKEN PUSH EXPO (Mobile)
+exports.savePushToken = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { token } = req.body;
+
+        if (!token) {
+            return res.status(400).json({ error: 'Token manquant.' });
+        }
+
+        await UserModel.savePushToken(userId, token);
+        res.json({ message: 'Token Push sauvegardé avec succès.' });
+    } catch (err) {
+        console.error("Erreur savePushToken:", err);
+        res.status(500).json({ error: 'Erreur lors de la sauvegarde du token.' });
+    }
+};

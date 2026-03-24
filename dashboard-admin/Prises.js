@@ -31,7 +31,7 @@ class PriseManager {
             const { value: nom } = await Swal.fire({
                 title: 'Ajouter une prise',
                 input: 'text',
-                inputLabel: 'Identifiant de la prise (ex: S1-01)',
+                inputLabel: 'Identifiant de la prise (ex: Prise1)',
                 showCancelButton: true,
                 inputValidator: (value) => {
                     if (!value) return 'Veuillez entrer un identifiant !'
@@ -302,7 +302,7 @@ class PriseManager {
                 
                 // Si la prise est occupée, on ajoute l'énergie et le coût accumulés
                 if (rawStatus === 'occupied' && currentEnergy > 0) {
-                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh | 💰 ${currentCost.toFixed(2)} €`;
+                    htmlContent += ` | 📈 ${currentEnergy.toFixed(1)} Wh`;
                 }
 
                 cellState.innerHTML = htmlContent;

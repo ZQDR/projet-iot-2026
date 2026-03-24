@@ -38,4 +38,7 @@ router.get('/profile', authMiddleware, authController.getProfile);
 // Privé : Route pour supprimer son propre compte (RGPD)
 router.delete('/delete', authMiddleware, authController.deleteAccount);
 
+// Privé : Sauvegarder le token Expo Push (Mobile)
+router.post('/push-token', authMiddleware, authController.savePushToken);
+
 module.exports = router;

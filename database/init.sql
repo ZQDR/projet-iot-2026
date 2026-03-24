@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     role ENUM('admin', 'student') DEFAULT 'student',
     device_id VARCHAR(100) NULL,
-    token_version INT DEFAULT 0 -- Version du token pour gérer la révocation
+    token_version INT DEFAULT 0, -- Version du token pour gérer la révocation
+    expo_push_token VARCHAR(255) DEFAULT NULL -- Pour les notifications Push sur mobile
 );
 
 -- 2. TABLE PRISES (PLUGS)

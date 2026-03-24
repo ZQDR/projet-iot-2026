@@ -6,6 +6,7 @@ const qrcode = require('qrcode');
 const mqttService = require('../services/mqttService');
 const socketService = require('../services/socketService');
 const db = require('../config/db');
+const pushService = require('../services/pushService'); // <-- Import du nouveau service
 
 // --- QUAND MEHDI SCANNE LE QR CODE ---
 exports.scanAndStart = async (req, res) => {
@@ -223,6 +224,9 @@ exports.forceStopCharge = async (req, res) => {
                 reason: 'admin_force_stop',
                 message: `Un administrateur a forcé l'arrêt de votre session sur la prise ${plugId}.`
             });
+            
+            // Notification Push (App fermée)
+            pushService.sendPushAlert(userId, '🛑 Arrêt forcé', `Un administrateur a coupé votre prise ${plugId}.`);
         }
 
         // 2. Extinction et libération de la prise
@@ -273,6 +277,9 @@ exports.toggleMaintenance = async (req, res) => {
                     reason: 'maintenance',
                     message: `La prise ${plugId} a été mise en maintenance. Votre session est arrêtée.`
                 });
+                
+                // Notification Push (App fermée)
+                pushService.sendPushAlert(userId, '🔧 Maintenance', `La prise ${plugId} a été mise en maintenance. Votre session est interrompue.`);
             }
 
             // 2. Mettre en maintenance et éteindre électriquement
