@@ -6,6 +6,11 @@ let expoInstance = null;
 
 const initExpo = async () => {
     if (!ExpoClass) {
+        // Polyfill pour Node.js 18 : expo-server-sdk utilise 'undici' qui nécessite la classe 'File'
+        if (!globalThis.File) {
+            globalThis.File = require('node:buffer').File;
+        }
+
         const expoModule = await import('expo-server-sdk');
         ExpoClass = expoModule.Expo;
         expoInstance = new ExpoClass();
