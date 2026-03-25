@@ -170,6 +170,11 @@ exports.deletePlug = async (req, res) => {
     try {
         const { plugId } = req.params;
 
+        // --- NOUVEAU : On détache l'historique avant de supprimer ---
+        // Met à NULL le plug_id dans la table consumption pour conserver
+        // les données de facturation des utilisateurs sans bloquer la suppression.
+        await db.execute('UPDATE consumption SET plug_id = NULL WHERE plug_id = ?', [plugId]);
+
         // Suppression SQL
         await db.execute('DELETE FROM plugs WHERE id = ?', [plugId]);
 
@@ -179,7 +184,7 @@ exports.deletePlug = async (req, res) => {
         res.json({ message: "Prise supprimée avec succès." });
     } catch (err) {
         console.error("Erreur suppression prise:", err);
-        // Gestion de la contrainte de clé étrangère (si la prise a un historique)
+        // Ce bloc catch sert toujours de sécurité au cas où une autre contrainte bloque
         if (err.code === 'ER_ROW_IS_REFERENCED_2') {
             return res.status(400).json({ error: "Impossible de supprimer cette prise car elle possède un historique de consommation." });
         }
