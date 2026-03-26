@@ -20,8 +20,11 @@ exports.createPayPalOrder = async (req, res) => {
             return res.status(400).json({ error: "Le solde maximum autorisé est de 100€. Vous ne pouvez pas recharger ce montant." });
         }
 
-        // On prépare la demande à PayPal
-        const request = paypalService.createOrderRequest(amount);
+        // PayPal exige un format de prix très strict (chaîne de caractères avec 2 décimales, ex: "10.00")
+        const formattedAmount = parseFloat(amount).toFixed(2).toString();
+
+        // On prépare la demande à PayPal avec le montant formaté
+        const request = paypalService.createOrderRequest(formattedAmount);
         const order = await paypalService.client.execute(request);
 
         // On renvoie l'ID unique (ex: '5K...') au Front pour qu'il ouvre la popup PayPal
