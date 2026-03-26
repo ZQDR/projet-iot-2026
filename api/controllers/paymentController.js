@@ -27,6 +27,10 @@ exports.createPayPalOrder = async (req, res) => {
         const request = paypalService.createOrderRequest(formattedAmount);
         const order = await paypalService.client.execute(request);
 
+        console.log(`✅ [PayPal] Commande créée avec succès sur le Backend !`);
+        console.log(`👉 ID envoyé au Frontend : ${order.result.id}`);
+        console.log(`⚠️ Si la popup plante maintenant, vérifiez que le HTML contient bien "&currency=EUR" et le bon client-id.`);
+
         // On renvoie l'ID unique (ex: '5K...') au Front pour qu'il ouvre la popup PayPal
         res.json({ id: order.result.id });
 
