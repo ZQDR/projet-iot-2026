@@ -38,8 +38,8 @@ app.use(['/api/plugs', '/plugs'], plugRoutes);
 app.use(['/api/consumption', '/consumption'], consumptionRoutes);
 app.use(['/api/payment', '/payment', '/api/payments', '/payments'], paymentRoutes);
 
-// Route de documentation Swagger (Accessible via http://ton-serveur:3000/api-docs)
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Route de documentation Swagger (Accessible via Nginx proxy sur /api/api-docs)
+app.use(['/api-docs', '/api/api-docs'], swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Route de test (Ping)
 app.get('/', (req, res) => {
