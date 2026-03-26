@@ -1,0 +1,200 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Recharge Ciel Newton",
+    "description": "Documentation de l'API de gestion des prises connectées et de la facturation.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Serveur principal (avec préfixe /api)"
+    },
+    {
+      "url": "/",
+      "description": "Serveur local (sans préfixe)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Authentification et gestion des utilisateurs" },
+    { "name": "Plugs", "description": "Gestion et contrôle des prises connectées" }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Connexion à l'API",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "admin@cielnewton.fr" },
+                  "password": { "type": "string", "example": "motdepasse123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connexion réussie avec retour du token JWT"
+          },
+          "401": {
+            "description": "Identifiants incorrects"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Créer un nouvel utilisateur (Admin seulement)",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "Jean Dupont" },
+                  "email": { "type": "string", "example": "jean@mail.com" },
+                  "password": { "type": "string", "example": "azerty" },
+                  "balance": { "type": "number", "example": 10.5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Utilisateur créé" },
+          "400": { "description": "Erreur de validation ou email déjà utilisé" }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "summary": "Récupérer son profil",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "Informations du profil récupérées" },
+          "404": { "description": "Utilisateur introuvable" }
+        }
+      }
+    },
+    "/plugs": {
+      "get": {
+        "summary": "Lister toutes les prises",
+        "tags": ["Plugs"],
+        "responses": {
+          "200": { "description": "Liste des prises avec leurs statuts" }
+        }
+      },
+      "post": {
+        "summary": "Ajouter une nouvelle prise (Admin)",
+        "tags": ["Plugs"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plugId": { "type": "string", "example": "Prise1" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Prise ajoutée avec succès" }
+        }
+      }
+    },
+    "/plugs/start": {
+      "post": {
+        "summary": "Démarrer une session de charge",
+        "tags": ["Plugs"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plugId": { "type": "string", "example": "S1-01" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session démarrée, courant activé" },
+          "400": { "description": "Prise déjà utilisée" },
+          "403": { "description": "Solde insuffisant" },
+          "404": { "description": "Prise inconnue" }
+        }
+      }
+    },
+    "/plugs/stop": {
+      "post": {
+        "summary": "Arrêter une session de charge",
+        "tags": ["Plugs"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plugId": { "type": "string", "example": "S1-01" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session arrêtée, facturation calculée" },
+          "404": { "description": "Aucune session active" }
+        }
+      }
+    },
+    "/plugs/{plugId}/qrcode": {
+      "get": {
+        "summary": "Générer le QR code d'une prise",
+        "tags": ["Plugs"],
+        "security": [],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugId",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de la prise (ex: S1-01)"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Image PNG du QR Code" },
+          "404": { "description": "Prise non trouvée" }
+        }
+      }
+    }
+  }
+}

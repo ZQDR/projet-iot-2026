@@ -13,6 +13,10 @@ const plugRoutes = require('./routes/plugs');
 const consumptionRoutes = require('./routes/consumption');
 const paymentRoutes = require('./routes/paymentRoutes'); // <-- C'est ici qu'on ajoute le paiement
 
+// Swagger UI
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -33,6 +37,9 @@ app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/plugs', '/plugs'], plugRoutes);
 app.use(['/api/consumption', '/consumption'], consumptionRoutes);
 app.use(['/api/payment', '/payment', '/api/payments', '/payments'], paymentRoutes);
+
+// Route de documentation Swagger (Accessible via http://ton-serveur:3000/api-docs)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Route de test (Ping)
 app.get('/', (req, res) => {
