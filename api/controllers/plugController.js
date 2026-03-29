@@ -94,7 +94,7 @@ exports.stopCharge = async (req, res) => {
         res.json({
             message: "Session terminée",
             energy_kwh: energyKwh.toFixed(4), // 4 décimales pour voir les micro-consommations
-            cost: `${cost.toFixed(4)}€`,
+            cost: `${cost.toFixed(2)}€`,
             newBalance: `${newBalance.toFixed(2)}€`
         });
 
