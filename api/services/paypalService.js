@@ -1,9 +1,14 @@
 // Utilisation de l'API REST directe (Remplace le SDK déprécié @paypal/checkout-server-sdk)
 
-// ATTENTION : Assurez-vous que le CLIENT_ID dans votre fichier .env est EXACTEMENT le même que celui de la balise <script> sur votre Front-End (AZPRCS7hV7d...) !
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AVwXN3Rbd66-P2JW76cuG91VMscS0E-g66mwyQQUbjiJqpkpTQOh-VRmx_E8TkwfRArQpAdygkkTeZBJ';
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EIg_lhXpnia2gSFf46ywj-LSofC4r-Ry9kATXUGOiI5_mlmbos6FbxunvnEuNgmIdxAqf1V17CNxlUe-';
-const base = process.env.PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+// Nettoyage drastique des identifiants avec .trim() pour éliminer les espaces et retours à la ligne invisibles
+const PAYPAL_CLIENT_ID = (process.env.PAYPAL_CLIENT_ID || 'AVwXN3Rbd66-P2JW76cuG91VMscS0E-g66mwyQQUbjiJqpkpTQOh-VRmx_E8TkwfRArQpAdygkkTeZBJ').trim();
+const PAYPAL_CLIENT_SECRET = (process.env.PAYPAL_CLIENT_SECRET || 'EIg_lhXpnia2gSFf46ywj-LSofC4r-Ry9kATXUGOiI5_mlmbos6FbxunvnEuNgmIdxAqf1V17CNxlUe-').trim();
+const PAYPAL_MODE = (process.env.PAYPAL_MODE || 'sandbox').trim().toLowerCase();
+
+const base = 'https://api-m.sandbox.paypal.com';
+
+console.log(`🔌 [PayPal Service] Mode actif : ${PAYPAL_MODE.toUpperCase()}`);
+console.log(`🔌 [PayPal Service] Client ID utilisé : ${PAYPAL_CLIENT_ID.substring(0, 10)}...`);
 
 // Générer le token d'accès PayPal
 const generateAccessToken = async () => {
@@ -16,6 +21,7 @@ const generateAccessToken = async () => {
                 Authorization: `Basic ${auth}`,
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
+            cache: 'no-store' // Essentiel : force Node.js à ne jamais cacher l'ancien Token
         });
         const data = await response.json();
         
@@ -45,10 +51,11 @@ module.exports = {
         const response = await fetch(url, {
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${accessToken.trim()}`,
             },
             method: 'POST',
             body: JSON.stringify(payload),
+            cache: 'no-store'
         });
         
         return response.json();
@@ -64,8 +71,9 @@ module.exports = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${accessToken.trim()}`,
             },
+            cache: 'no-store'
         });
         
         return response.json();
