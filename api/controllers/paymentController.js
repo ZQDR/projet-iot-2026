@@ -26,6 +26,12 @@ exports.createPayPalOrder = async (req, res) => {
         // Création de la commande via notre nouveau service basé sur fetch
         const orderData = await paypalService.createOrder(formattedAmount);
 
+        // VÉRIFICATION : Si PayPal n'a pas renvoyé d'ID (ex: problème d'identifiants ou de réseau)
+        if (!orderData || !orderData.id) {
+            console.error(`❌ [PayPal] Erreur retournée par l'API PayPal :`, orderData);
+            return res.status(500).json({ error: "Erreur de communication avec l'API PayPal", details: orderData });
+        }
+
         console.log(`✅ [PayPal] Commande créée avec succès sur le Backend !`);
         console.log(`👉 ID envoyé au Frontend : ${orderData.id}`);
         console.log(`⚠️ Si la popup plante maintenant, vérifiez que le HTML contient bien "&currency=EUR" et le bon client-id.`);
