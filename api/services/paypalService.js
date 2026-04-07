@@ -1,8 +1,9 @@
 // Utilisation de l'API REST directe (Remplace le SDK déprécié @paypal/checkout-server-sdk)
 
+// ATTENTION : Assurez-vous que le CLIENT_ID dans votre fichier .env est EXACTEMENT le même que celui de la balise <script> sur votre Front-End (AZPRCS7hV7d...) !
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AVwXN3Rbd66-P2JW76cuG91VMscS0E-g66mwyQQUbjiJqpkpTQOh-VRmx_E8TkwfRArQpAdygkkTeZBJ';
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EIg_lhXpnia2gSFf46ywj-LSofC4r-Ry9kATXUGOiI5_mlmbos6FbxunvnEuNgmIdxAqf1V17CNxlUe-';
-const base = 'https://api-m.sandbox.paypal.com';
+const base = process.env.PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
 // Générer le token d'accès PayPal
 const generateAccessToken = async () => {
@@ -13,12 +14,20 @@ const generateAccessToken = async () => {
             body: 'grant_type=client_credentials',
             headers: {
                 Authorization: `Basic ${auth}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
         });
         const data = await response.json();
+        
+        if (!response.ok) {
+            console.error("❌ Erreur API PayPal lors de la génération du token :", data);
+            throw new Error(data.error_description || data.error || "Impossible de générer le token d'accès");
+        }
+        
         return data.access_token;
     } catch (error) {
-        console.error("Erreur de génération du token PayPal:", error);
+        console.error("❌ Exception dans generateAccessToken :", error.message);
+        throw error; // On remonte l'erreur pour que createOrder s'arrête
     }
 };
 
@@ -26,6 +35,8 @@ module.exports = {
     // Créer une commande PayPal
     createOrder: async (amount) => {
         const accessToken = await generateAccessToken();
+        if (!accessToken) throw new Error("Token d'accès manquant.");
+
         const url = `${base}/v2/checkout/orders`;
         const payload = {
             intent: 'CAPTURE',
@@ -39,12 +50,15 @@ module.exports = {
             method: 'POST',
             body: JSON.stringify(payload),
         });
+        
         return response.json();
     },
 
     // Capturer la commande (Validation du paiement)
     captureOrder: async (orderID) => {
         const accessToken = await generateAccessToken();
+        if (!accessToken) throw new Error("Token d'accès manquant.");
+        
         const url = `${base}/v2/checkout/orders/${orderID}/capture`;
         const response = await fetch(url, {
             method: 'POST',
@@ -53,6 +67,7 @@ module.exports = {
                 Authorization: `Bearer ${accessToken}`,
             },
         });
+        
         return response.json();
     }
 };
