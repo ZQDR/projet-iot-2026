@@ -23,16 +23,15 @@ exports.createPayPalOrder = async (req, res) => {
         // PayPal exige un format de prix très strict (chaîne de caractères avec 2 décimales, ex: "10.00")
         const formattedAmount = parseFloat(amount).toFixed(2).toString();
 
-        // On prépare la demande à PayPal avec le montant formaté
-        const request = paypalService.createOrderRequest(formattedAmount);
-        const order = await paypalService.client.execute(request);
+        // Création de la commande via notre nouveau service basé sur fetch
+        const orderData = await paypalService.createOrder(formattedAmount);
 
         console.log(`✅ [PayPal] Commande créée avec succès sur le Backend !`);
-        console.log(`👉 ID envoyé au Frontend : ${order.result.id}`);
+        console.log(`👉 ID envoyé au Frontend : ${orderData.id}`);
         console.log(`⚠️ Si la popup plante maintenant, vérifiez que le HTML contient bien "&currency=EUR" et le bon client-id.`);
 
         // On renvoie l'ID unique (ex: '5K...') au Front pour qu'il ouvre la popup PayPal
-        res.json({ id: order.result.id });
+        res.json({ id: orderData.id });
 
     } catch (err) {
         console.error("❌ ERREUR PAYPAL (Create Order) :");
@@ -54,14 +53,13 @@ exports.capturePayPalOrder = async (req, res) => {
         }
 
         // SÉCURITÉ : On demande directement à PayPal si l'argent est bien là
-        const request = paypalService.captureOrderRequest(orderId);
-        const capture = await paypalService.client.execute(request);
+        const captureData = await paypalService.captureOrder(orderId);
 
         // Si PayPal répond "COMPLETED", c'est que l'argent est sur ton compte
-        if (capture.result.status === 'COMPLETED') {
+        if (captureData.status === 'COMPLETED') {
             
             // On récupère le montant réel payé (sécurité)
-            const amountPaid = capture.result.purchase_units[0].payments.captures[0].amount.value;
+            const amountPaid = captureData.purchase_units[0].payments.captures[0].amount.value;
             const amountFloat = parseFloat(amountPaid);
 
             // --- LOGIQUE MÉTIER ---

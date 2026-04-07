@@ -30,7 +30,7 @@ exports.scanAndStart = async (req, res) => {
         mqttService.turnOn(plugId);
         await ConsumptionModel.startSession(userId, plugId);
         await PlugModel.updateStatus(plugId, 'occupied');
-        console.log(`🟢 [CONTROLLER] Prise ${plugId} démarrée. Déclenchement du WebSocket...`);
+        console.log(` [CONTROLLER] Prise ${plugId} démarrée. Déclenchement du WebSocket...`);
         socketService.emit('status_update', { plugId, status: 'occupied', username: user.username });
 
         // 2. On sauvegarde cet index de départ dans la session créée

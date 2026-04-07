@@ -1,40 +1,58 @@
-const paypal = require('@paypal/checkout-server-sdk');
+// Utilisation de l'API REST directe (Remplace le SDK déprécié @paypal/checkout-server-sdk)
 
-// Vérification de sécurité au démarrage
-if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
-    console.error("\n⚠️  ATTENTION : Les identifiants PayPal (CLIENT_ID / SECRET) ne sont pas définis dans le fichier .env ! Le paiement ne fonctionnera pas.\n");
-}
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AVwXN3Rbd66-P2JW76cuG91VMscS0E-g66mwyQQUbjiJqpkpTQOh-VRmx_E8TkwfRArQpAdygkkTeZBJ';
+const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EIg_lhXpnia2gSFf46ywj-LSofC4r-Ry9kATXUGOiI5_mlmbos6FbxunvnEuNgmIdxAqf1V17CNxlUe-';
+const base = 'https://api-m.sandbox.paypal.com';
 
-// Configuration de l'environnement (Sandbox pour les tests, Live pour la vraie vie)
-const environment = new paypal.core.SandboxEnvironment(
-    process.env.PAYPAL_CLIENT_ID,
-    process.env.PAYPAL_CLIENT_SECRET
-);
-const client = new paypal.core.PayPalHttpClient(environment);
+// Générer le token d'accès PayPal
+const generateAccessToken = async () => {
+    try {
+        const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
+        const response = await fetch(`${base}/v1/oauth2/token`, {
+            method: 'POST',
+            body: 'grant_type=client_credentials',
+            headers: {
+                Authorization: `Basic ${auth}`,
+            },
+        });
+        const data = await response.json();
+        return data.access_token;
+    } catch (error) {
+        console.error("Erreur de génération du token PayPal:", error);
+    }
+};
 
 module.exports = {
-    client,
-    
-    // Helper pour créer une requête de commande standard
-    createOrderRequest: (amount) => {
-        const request = new paypal.orders.OrdersCreateRequest();
-        request.prefer("return=representation");
-        request.requestBody({
+    // Créer une commande PayPal
+    createOrder: async (amount) => {
+        const accessToken = await generateAccessToken();
+        const url = `${base}/v2/checkout/orders`;
+        const payload = {
             intent: 'CAPTURE',
-            purchase_units: [{
-                amount: {
-                    currency_code: 'EUR',
-                    value: parseFloat(amount).toFixed(2)
-                }
-            }]
+            purchase_units: [{ amount: { currency_code: 'EUR', value: parseFloat(amount).toFixed(2) } }],
+        };
+        const response = await fetch(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+            },
+            method: 'POST',
+            body: JSON.stringify(payload),
         });
-        return request;
+        return response.json();
     },
 
-    // Helper pour capturer (valider) la commande
-    captureOrderRequest: (orderId) => {
-        const request = new paypal.orders.OrdersCaptureRequest(orderId);
-        request.requestBody({});
-        return request;
+    // Capturer la commande (Validation du paiement)
+    captureOrder: async (orderID) => {
+        const accessToken = await generateAccessToken();
+        const url = `${base}/v2/checkout/orders/${orderID}/capture`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+        return response.json();
     }
 };
