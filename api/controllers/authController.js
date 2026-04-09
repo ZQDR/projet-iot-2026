@@ -239,10 +239,17 @@ exports.savePushToken = async (req, res) => {
         const { token } = req.body;
 
         if (!token) {
-            return res.status(400).json({ error: 'Token manquant.' });
+            return res.status(400).json({ error: 'Le champ "token" est manquant dans le corps de la requête.' });
+        }
+
+        // Sécurité : S'assurer que c'est bien un token Expo valide avant de polluer la BDD
+        if (!token.startsWith('ExponentPushToken[') && !token.startsWith('ExpoPushToken[')) {
+            return res.status(400).json({ error: 'Format de token invalide. Attendu: ExponentPushToken[...]' });
         }
 
         await UserModel.savePushToken(userId, token);
+        
+        console.log(`✅ [Push Token] Sauvegardé avec succès pour l'utilisateur ID: ${userId}`);
         res.json({ message: 'Token Push sauvegardé avec succès.' });
     } catch (err) {
         console.error("Erreur savePushToken:", err);

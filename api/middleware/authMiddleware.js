@@ -17,7 +17,9 @@ module.exports = (req, res, next) => {
 
     jwt.verify(token, secret, async (err, decoded) => {
         if (err) {
-            return res.status(403).json({ error: 'Token invalide ou expiré.' });
+            // Log explicite pour faciliter le debug (ex: TokenExpiredError, JsonWebTokenError)
+            console.error(`[AuthMiddleware] Refus 403: ${err.name} - ${err.message}`);
+            return res.status(403).json({ error: 'Token invalide ou expiré.', details: err.message });
         }
         
         try {
