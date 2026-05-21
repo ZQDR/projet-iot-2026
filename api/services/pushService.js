@@ -1,4 +1,5 @@
 const UserModel = require('../models/userModel');
+const db = require('../config/db');
 
 // Chargement différé et dynamique de expo-server-sdk (Module ES)
 let ExpoClass = null;
@@ -44,7 +45,19 @@ const pushService = {
             }];
 
             let chunks = expoInstance.chunkPushNotifications(messages);
-            await expoInstance.sendPushNotificationsAsync(chunks[0]);
+            let ticketChunk = await expoInstance.sendPushNotificationsAsync(chunks[0]);
+            
+            // Vérification des retours d'Expo pour nettoyer les tokens invalides
+            for (let ticket of ticketChunk) {
+                if (ticket.status === 'error') {
+                    if (ticket.details && ticket.details.error === 'DeviceNotRegistered') {
+                        console.log(`🧹 Nettoyage : Token inactif/expiré pour l'utilisateur ${userId}. Suppression en BDD.`);
+                        await db.execute('UPDATE users SET expo_push_token = NULL WHERE id = ?', [userId]);
+                    } else {
+                        console.error(`⚠️ Erreur d'envoi Push pour l'utilisateur ${userId} :`, ticket.message);
+                    }
+                }
+            }
         } catch (error) {
             console.error("❌ Erreur d'envoi de la Notification Push :", error);
         }
