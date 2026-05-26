@@ -82,7 +82,7 @@ const mqttService = {
                 const subTopic = topicParts[topicParts.length - 1];
                 if (subTopic === 'power') {
                     currentPower = parseFloat(payload);
-                    if (isNaN(currentPower)) currentPower = 0;
+                    if (isNaN(currentPower)) currentPower = undefined; // On ignore la mesure au lieu de la forcer à 0
                 }
                 else if (subTopic === 'voltage') {
                     const v = parseFloat(payload);
@@ -121,11 +121,11 @@ const mqttService = {
 
                     if (plugData.power !== undefined) {
                         currentPower = parseFloat(plugData.power);
-                        if (isNaN(currentPower)) currentPower = 0;
+                        if (isNaN(currentPower)) currentPower = undefined; // On ignore la mesure au lieu de la forcer à 0
                     }
                     else if (plugData.apower !== undefined) {
                         currentPower = parseFloat(plugData.apower);
-                        if (isNaN(currentPower)) currentPower = 0;
+                        if (isNaN(currentPower)) currentPower = undefined; // On ignore la mesure au lieu de la forcer à 0
                     }
 
                     if (plugData.overpower) isOverpower = true; // Gen 1 JSON
