@@ -268,8 +268,11 @@ class PriseManager {
             // CORRECTION CRITIQUE : MySQL renvoie 1/0, le WebSocket renvoie true/false.
             const rawState = row.dataset.state;
             const currentState = rawState === "true" || rawState === true || rawState === "1" || rawState == 1;
-            const currentPower = row.dataset.power || 0;
-            const currentVoltage = row.dataset.voltage || 0;
+            
+            let currentPower = parseFloat(row.dataset.power);
+            if (isNaN(currentPower)) currentPower = 0;
+            
+            const currentVoltage = parseFloat(row.dataset.voltage) || 0;
             const currentEnergy = parseFloat(row.dataset.energyWh) || 0;
             const currentCost = parseFloat(row.dataset.cost) || 0;
             const currentUsername = row.dataset.username || "";
@@ -295,8 +298,8 @@ class PriseManager {
                     htmlContent += ` (${currentVoltage} V)`;
                 }
 
-                // Si c'est allumé et qu'on a de la puissance, on l'affiche
-                if (currentState && currentPower > 0) {
+                // Si c'est allumé, on affiche la puissance même si elle est à 0W (évite null W ou 0WW)
+                if (currentState && currentPower >= 0) {
                     htmlContent += ` - ${currentPower} W`;
                 }
                 

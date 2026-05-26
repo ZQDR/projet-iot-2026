@@ -80,7 +80,10 @@ const mqttService = {
 
                 // --- CAS A : Valeurs brutes (Gen 1) ---
                 const subTopic = topicParts[topicParts.length - 1];
-                if (subTopic === 'power') currentPower = parseFloat(payload);
+                if (subTopic === 'power') {
+                    currentPower = parseFloat(payload);
+                    if (isNaN(currentPower)) currentPower = 0;
+                }
                 else if (subTopic === 'voltage') {
                     const v = parseFloat(payload);
                     if (!isNaN(v)) {
@@ -116,8 +119,14 @@ const mqttService = {
                         plugData = switchData;
                     }
 
-                    if (plugData.power !== undefined) currentPower = plugData.power;
-                    else if (plugData.apower !== undefined) currentPower = plugData.apower;
+                    if (plugData.power !== undefined) {
+                        currentPower = parseFloat(plugData.power);
+                        if (isNaN(currentPower)) currentPower = 0;
+                    }
+                    else if (plugData.apower !== undefined) {
+                        currentPower = parseFloat(plugData.apower);
+                        if (isNaN(currentPower)) currentPower = 0;
+                    }
 
                     if (plugData.overpower) isOverpower = true; // Gen 1 JSON
 
@@ -211,9 +220,8 @@ const mqttService = {
                             let currentEnergyWh = energyVal - indexStart;
                             if (currentEnergyWh < 0) currentEnergyWh = 0;
                             
-                            const energyKwh = currentEnergyWh / 1000;
+                            const energyKwh = (currentEnergyWh / 1000)*1000000;
                             //let currentCost = energyKwh * 0.2516; // Calcul du coût réel basé sur le kWh en France
-                            let currentCost = energyKwh * 1000000;
 
                             // Récupération du solde initial de l'utilisateur
                             const [users] = await db.execute('SELECT username, balance FROM users WHERE id = ?', [userId]);
