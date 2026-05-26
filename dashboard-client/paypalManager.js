@@ -28,35 +28,54 @@ class PayPalManager {
             createOrder: async (data, actions) => {
                 const amountInput = document.getElementById(amountInputId);
                 const amount = amountInput ? amountInput.value : "10.00";
+                const currentToken = this.getToken();
+
+                console.log("=== [DEBUG] PAYPAL CREATE ORDER ===");
+                console.log("URL:", `${this.apiUrl}/payment/create-order`);
+                console.log("Token envoyé:", currentToken);
+                console.log("Body envoyé:", { amount: amount });
 
                 try {
                     const response = await fetch(`${this.apiUrl}/payment/create-order`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
-                            "Authorization": `Bearer ${this.getToken()}`
+                            "Authorization": `Bearer ${currentToken}`
                         },
                         body: JSON.stringify({ amount: amount })
                     });
 
                     const orderData = await response.json();
+                    
+                    console.log("Status HTTP de la réponse:", response.status);
+                    console.log("Données brutes reçues du Backend:", orderData);
+                    console.log("=====================================");
 
-                    if (orderData.id) {
-                        return orderData.id;
-                    } else {
-                        const errorDetail = orderData.details?.[0];
-                        const errorMessage = errorDetail ? `${errorDetail.issue} ${errorDetail.description}` : JSON.stringify(orderData);
+                    // Si la réponse du serveur n'est pas OK (ex: 500) ou si l'ID de commande est manquant
+                    if (!response.ok || !orderData.id) {
+                        // On construit un message d'erreur clair à partir de la réponse de l'API
+                        const errorMessage = orderData.error || (orderData.details && orderData.details[0] ? orderData.details[0].description : "Erreur inconnue du serveur.");
+                        // On lève une exception pour que le `catch` la récupère et l'affiche
                         throw new Error(errorMessage);
                     }
+
+                    // Tout va bien, on renvoie l'ID de commande à PayPal
+                    return orderData.id;
+
                 } catch (error) {
                     console.error("Erreur createOrder:", error);
-                    if(typeof Swal !== 'undefined') Swal.fire("Erreur", "Impossible d'initialiser le paiement.", "error");
-                    else alert("Impossible d'initialiser le paiement.");
+                    if(typeof Swal !== 'undefined') Swal.fire("Erreur d'initialisation", error.message, "error");
+                    else alert(error.message);
+                    // TRÈS IMPORTANT : On rejette la promesse pour que le bouton PayPal se réinitialise proprement
+                    throw error;
                 }
             },
 
             // Étape 2 : Capture (Validation) après que l'utilisateur a payé
             onApprove: async (data, actions) => {
+                console.log("=== [DEBUG] PAYPAL ON APPROVE ===");
+                console.log("Data retournées par la popup PayPal:", data);
+
                 try {
                     const response = await fetch(`${this.apiUrl}/payment/capture-order`, {
                         method: "POST",
@@ -68,6 +87,10 @@ class PayPalManager {
                     });
 
                     const transactionData = await response.json();
+
+                    console.log("Status HTTP Capture:", response.status);
+                    console.log("Données brutes de Capture (Backend):", transactionData);
+                    console.log("====================================");
 
                     if (response.ok) {
                         if(typeof Swal !== 'undefined') Swal.fire("Succès", `Rechargement réussi ! Nouveau solde : ${transactionData.newBalance}€`, "success");
