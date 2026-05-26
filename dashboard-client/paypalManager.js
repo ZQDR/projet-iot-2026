@@ -110,4 +110,4 @@ class PayPalManager {
             }
         }).render(`#${containerId}`);
     }
-}//
+}
