@@ -220,7 +220,7 @@ const mqttService = {
                             let currentEnergyWh = energyVal - indexStart;
                             if (currentEnergyWh < 0) currentEnergyWh = 0;
                             
-                            const energyKwh = (currentEnergyWh / 1000)*10000;
+                            const energyKwh = (currentEnergyWh / 1000)*100000;
                             let currentCost = energyKwh * 0.2516; // Calcul du coût réel basé sur le kWh en France
 
                             // Récupération du solde initial de l'utilisateur
@@ -237,6 +237,7 @@ const mqttService = {
                                     plugId: plugId,
                                     sessionId: activeSession.id,
                                     energyWh: currentEnergyWh,
+                                    energy_kwh: energyKwh,
                                     cost: currentCost,
                                     newBalance: currentBalance
                                 });
