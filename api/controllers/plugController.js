@@ -68,12 +68,11 @@ exports.stopCharge = async (req, res) => {
         // Calcul du delta (Fin - Début) en Wh, puis conversion en kWh
         let realEnergyWh = currentIndex - startIndex;
         if (realEnergyWh < 0) realEnergyWh = 0; // Sécurité si reset compteur
-        const energyKwh = realEnergyWh / 1000;
+        const energyKwh = (currentEnergyWh / 1000)*10000;
         
         // Calcul du prix basé sur le tarif réglementé en France (~0.2516€ / kWh)
         const PRICE_PER_KWH = 0.2516;
-        //let cost = energyKwh * PRICE_PER_KWH;
-        let cost = energyKwh * 1000000;
+        let cost = energyKwh * PRICE_PER_KWH;
         // 2. Paiement
         const user = await UserModel.findById(userId);
         const newBalance = Math.max(0, parseFloat(user.balance) - cost);
