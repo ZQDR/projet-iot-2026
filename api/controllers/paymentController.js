@@ -203,3 +203,8 @@ exports.verifyStripeSession = async (req, res) => {
         res.status(500).json({ error: "Erreur serveur : " + err.message });
     }
 };
+
+// --- PAYPAL : RÉCUPÉRER LE CLIENT ID POUR LE FRONTEND ---
+exports.getPayPalConfig = (req, res) => {
+    res.json({ clientId: process.env.PAYPAL_CLIENT_ID || '' });
+};

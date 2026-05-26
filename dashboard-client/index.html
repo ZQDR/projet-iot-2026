@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <script src="https://www.paypal.com/sdk/js?client-id=AZPRCS7hV7d7dRu9iTIDXXPLh19rl7Wj5feE1UTejAhpjiQ1_oTYoDrPPMxDCxOLVgbVkpbYeEhYjPtZ&currency=EUR"></script>
     <script src="./paypalManager.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
@@ -205,6 +204,28 @@
         document.getElementById('userBalance').innerText = Number(e.detail).toFixed(2);
     });
 
+    // --- 0. CHARGER DYNAMIQUEMENT PAYPAL ---
+    async function loadPayPalScript() {
+        if (document.getElementById('paypal-sdk-script')) return; // Évite de charger deux fois
+        const token = localStorage.getItem('jwtToken');
+        try {
+            const response = await fetch(`${API_URL}/payment/config`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            
+            if (data.clientId) {
+                const script = document.createElement('script');
+                script.id = 'paypal-sdk-script';
+                script.src = `https://www.paypal.com/sdk/js?client-id=${data.clientId}&currency=EUR`;
+                script.onload = () => initPayPal();
+                document.body.appendChild(script);
+            }
+        } catch (err) {
+            console.error("Impossible de récupérer la config PayPal depuis le serveur", err);
+        }
+    }
+
     // --- 1. FONCTION DE CONNEXION ---
     async function login() {
         const email = document.getElementById('emailInput').value;
@@ -239,7 +260,7 @@
                 await loadProfile();
                 await loadPlugs();
                 initWebSocket();
-                initPayPal(); // Initialisation du terminal de paiement
+                loadPayPalScript(); // Charge le SDK avec le Client ID du serveur, puis initie le bouton
             } else {
                 errorMsg.innerText = "Email ou mot de passe incorrect.";
                 errorMsg.style.display = "block";
@@ -662,7 +683,7 @@
             await loadProfile();
             await loadPlugs();
             initWebSocket();
-            initPayPal();
+            loadPayPalScript();
             checkStripeReturn();
         })();
     }
