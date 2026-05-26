@@ -10,6 +10,10 @@ class PayPalManager {
      * @param {string} amountInputId - L'ID de l'input contenant le montant à payer
      */
     init(containerId, amountInputId) {
+        // --- DEBUG : Vérification du Client ID utilisé par le Frontend ---
+        const scriptTag = document.querySelector('script[src*="paypal.com/sdk/js"]');
+        console.log("🔍 [VÉRIFICATION PAYPAL] URL du script chargé :", scriptTag ? scriptTag.src : "Introuvable");
+
         if (!window.paypal) {
             console.error("Le SDK PayPal n'est pas chargé via <script>.");
             return;

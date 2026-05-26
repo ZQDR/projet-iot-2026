@@ -1,8 +1,8 @@
 // Utilisation de l'API REST directe (Remplace le SDK déprécié @paypal/checkout-server-sdk)
 
 // Nettoyage drastique des identifiants avec .trim() pour éliminer les espaces et retours à la ligne invisibles
-const PAYPAL_CLIENT_ID = 'AZPRCS7hV7d7dRu9iTIDXXPLh19rl7Wj5feE1UTejAhpjiQ1_oTYoDrPPMxDCxOLVgbVkpbYeEhYjPtZ';
-const PAYPAL_CLIENT_SECRET = 'EA0GqdKm88qJeGXEahc5qJzajJSA04jj2E7asB3oyoDgIJ0LNvzg4cTXD7goerL9xvpuS6IEzODU90xw';
+const PAYPAL_CLIENT_ID = (process.env.PAYPAL_CLIENT_ID || '').trim();
+const PAYPAL_CLIENT_SECRET = (process.env.PAYPAL_CLIENT_SECRET || '').trim();
 const PAYPAL_MODE = (process.env.PAYPAL_MODE || 'sandbox').trim().toLowerCase();
 
 const base = 'https://api-m.sandbox.paypal.com';
