@@ -30,15 +30,6 @@ services:
       # SURCHARGE POUR DOCKER (Prioritaire sur le .env)
       - DB_HOST=db
       - DB_PORT=3306
-      # RÉCUPÉRATION DES VARIABLES DU .ENV
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - DB_NAME=${DB_NAME}
-      - HIVEMQ_HOST=${HIVEMQ_HOST}
-      - HIVEMQ_USER=${HIVEMQ_USER}
-      - HIVEMQ_PASS=${HIVEMQ_PASS}
-      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
-      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
     depends_on:
       db:
         condition: service_healthy
