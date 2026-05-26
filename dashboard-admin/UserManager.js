@@ -22,7 +22,7 @@ class UserManager {
         if (typeof io !== 'undefined') {
             if (!window.appSocket) {
                 const socketUrl = this.apiUrl.replace('/api', '');
-                window.appSocket = io(socketUrl, { path: "/api/socket.io", transports: ['websocket', 'polling'] });
+                window.appSocket = io(socketUrl, { transports: ['websocket', 'polling'] });
             }
             this.socket = window.appSocket;
             

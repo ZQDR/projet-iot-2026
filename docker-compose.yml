@@ -37,8 +37,6 @@ services:
       - HIVEMQ_HOST=${HIVEMQ_HOST}
       - HIVEMQ_USER=${HIVEMQ_USER}
       - HIVEMQ_PASS=${HIVEMQ_PASS}
-      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
-      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
     depends_on:
       db:
         condition: service_healthy

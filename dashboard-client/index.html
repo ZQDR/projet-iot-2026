@@ -539,7 +539,6 @@
     function initWebSocket() {
         if(socket) return; // Évite de connecter deux fois
         socket = io(SOCKET_URL, {
-            path: "/api/socket.io",
             transports: ['websocket', 'polling'] // Force le vrai WebSocket
         });
         const statusBox = document.getElementById('realTimeStatus');
