@@ -69,7 +69,7 @@ exports.stopCharge = async (req, res) => {
         let realEnergyWh = currentIndex - startIndex;
         if (realEnergyWh < 0) realEnergyWh = 0; // Sécurité si reset compteur
         
-        const energyKwh = (realEnergyWh / 1000)*100000;
+        const energyKwh = realEnergyWh / 1000;
 
         // Calcul du prix basé sur le tarif réglementé en France (~0.2516€ / kWh)
         const PRICE_PER_KWH = 0.2516;
