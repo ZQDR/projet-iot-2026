@@ -1,15 +1,17 @@
 // Utilisation de l'API REST directe (Remplace le SDK déprécié @paypal/checkout-server-sdk)
 
-// Nettoyage drastique des identifiants avec .trim() pour éliminer les espaces et retours à la ligne invisibles
-const PAYPAL_CLIENT_ID = (process.env.PAYPAL_CLIENT_ID || '').trim();
-const PAYPAL_CLIENT_SECRET = (process.env.PAYPAL_CLIENT_SECRET || '').trim();
-const PAYPAL_MODE = (process.env.PAYPAL_MODE || 'sandbox').trim().toLowerCase();
+// Fonction pour nettoyer les guillemets (") ou apostrophes (') que Docker pourrait rajouter par erreur
+const cleanEnvVar = (val) => (val || '').replace(/^["']|["']$/g, '').trim();
+
+const PAYPAL_CLIENT_ID = cleanEnvVar(process.env.PAYPAL_CLIENT_ID);
+const PAYPAL_CLIENT_SECRET = cleanEnvVar(process.env.PAYPAL_CLIENT_SECRET);
+const PAYPAL_MODE = cleanEnvVar(process.env.PAYPAL_MODE) || 'sandbox';
 
 const base = 'https://api-m.sandbox.paypal.com';
 
 console.log(`🔌 [PayPal Service] Mode actif : ${PAYPAL_MODE.toUpperCase()}`);
 console.log(`🔌 [PayPal Service] Client ID utilisé : ${PAYPAL_CLIENT_ID.substring(0, 10)}...`);
-console.log(`🔌 [PayPal Service] Le Secret provient du .env ? : ${process.env.PAYPAL_CLIENT_SECRET ? '✅ OUI' : '❌ NON (Le fichier .env est ignoré ou vide)'}`);
+console.log(`🔌 [PayPal Service] Secret utilisé : ${PAYPAL_CLIENT_SECRET.substring(0, 5)}... (longueur: ${PAYPAL_CLIENT_SECRET.length})`);
 
 // Générer le token d'accès PayPal
 const generateAccessToken = async () => {
