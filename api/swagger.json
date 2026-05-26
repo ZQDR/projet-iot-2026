@@ -31,7 +31,8 @@
   ],
   "tags": [
     { "name": "Auth", "description": "Authentification et gestion des utilisateurs" },
-    { "name": "Plugs", "description": "Gestion et contrôle des prises connectées" }
+    { "name": "Plugs", "description": "Gestion et contrôle des prises connectées" },
+    { "name": "Paiements", "description": "Rechargement de solde via PayPal ou Stripe" }
   ],
   "paths": {
     "/auth/login": {
@@ -193,6 +194,294 @@
         "responses": {
           "200": { "description": "Image PNG du QR Code" },
           "404": { "description": "Prise non trouvée" }
+        }
+      }
+    },
+    "/auth/users": {
+      "get": {
+        "summary": "Lister tous les utilisateurs (Admin seulement)",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "Liste des utilisateurs (ID, Username, Balance)" },
+          "401": { "description": "Non autorisé" },
+          "403": { "description": "Interdit (Nécessite le rôle admin)" }
+        }
+      }
+    },
+    "/auth/users/{id}": {
+      "put": {
+        "summary": "Mettre à jour les informations d'un utilisateur (Admin seulement)",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de l'utilisateur"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "Nouveau Nom" },
+                  "email": { "type": "string", "example": "nouveau@mail.com" },
+                  "password": { "type": "string", "example": "nouveauMDP", "description": "Optionnel" },
+                  "balance": { "type": "number", "example": 25.50 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Utilisateur mis à jour avec succès" },
+          "400": { "description": "Erreur de saisie ou email déjà existant" },
+          "404": { "description": "Utilisateur introuvable" }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer un utilisateur spécifique (Admin seulement)",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de l'utilisateur à supprimer"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Utilisateur supprimé avec succès" },
+          "403": { "description": "Tentative de suppression du fondateur interdite" },
+          "404": { "description": "Utilisateur introuvable" }
+        }
+      }
+    },
+    "/auth/users/{id}/history": {
+      "get": {
+        "summary": "Récupérer l'historique complet d'un utilisateur (Soi-même ou Admin)",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de l'utilisateur"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historique des recharges, des sessions de charge et profil de l'utilisateur"
+          },
+          "403": { "description": "Accès interdit à cet historique" }
+        }
+      }
+    },
+    "/auth/delete": {
+      "delete": {
+        "summary": "Supprimer son propre compte (RGPD - Droit à l'oubli)",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "Compte et données personnelles supprimés avec succès" },
+          "404": { "description": "Utilisateur introuvable" }
+        }
+      }
+    },
+    "/auth/push-token": {
+      "post": {
+        "summary": "Sauvegarder le token de notification Push (Expo)",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": { "type": "string", "example": "ExponentPushToken[...]" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Token Push sauvegardé avec succès" },
+          "400": { "description": "Format de token invalide ou manquant" }
+        }
+      }
+    },
+    "/payment/config": {
+      "get": {
+        "summary": "Récupérer la configuration PayPal (Client ID)",
+        "tags": ["Paiements"],
+        "responses": {
+          "200": {
+            "description": "Retourne le Client ID configuré sur le serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clientId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment/create-order": {
+      "post": {
+        "summary": "Créer une intention de commande PayPal",
+        "tags": ["Paiements"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "number", "example": 10.00 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Commande créée avec succès sur l'API PayPal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "example": "5K1234567890" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Montant invalide ou dépassement de la limite de solde de 100€" },
+          "500": { "description": "Erreur d'authentification ou de création côté PayPal" }
+        }
+      }
+    },
+    "/payment/capture-order": {
+      "post": {
+        "summary": "Capturer une commande PayPal et créditer le compte",
+        "tags": ["Paiements"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderId": { "type": "string", "example": "5K1234567890" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Paiement validé et solde mis à jour en BDD",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "newBalance": { "type": "string", "example": "25.50" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "ID de commande manquant ou paiement non validé par PayPal" },
+          "500": { "description": "Erreur serveur lors de la mise à jour du solde" }
+        }
+      }
+    },
+    "/payment/create-stripe-session": {
+      "post": {
+        "summary": "Initialiser une session de paiement Stripe (CB/Apple Pay)",
+        "tags": ["Paiements"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "number", "example": 10.00 },
+                  "returnUrl": { "type": "string", "description": "URL de redirection après paiement", "example": "https://recharge.cielnewton.fr" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session Stripe créée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "description": "Lien vers la page de paiement sécurisée Stripe" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Montant invalide ou dépassement du plafond de 100€" },
+          "500": { "description": "Stripe mal configuré" }
+        }
+      }
+    },
+    "/payment/verify-stripe-session": {
+      "post": {
+        "summary": "Vérifier l'état d'un paiement Stripe au retour de l'utilisateur",
+        "tags": ["Paiements"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": { "type": "string", "example": "cs_test_a1b2c3d4..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Paiement validé avec succès (ou déjà validé précédemment)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "newBalance": { "type": "string", "example": "25.50" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Session invalide ou paiement rejeté par la banque" },
+          "404": { "description": "Utilisateur introuvable" },
+          "500": { "description": "Erreur serveur ou de communication avec Stripe" }
         }
       }
     }
