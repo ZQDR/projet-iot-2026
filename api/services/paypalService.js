@@ -9,6 +9,7 @@ const base = 'https://api-m.sandbox.paypal.com';
 
 console.log(`🔌 [PayPal Service] Mode actif : ${PAYPAL_MODE.toUpperCase()}`);
 console.log(`🔌 [PayPal Service] Client ID utilisé : ${PAYPAL_CLIENT_ID.substring(0, 10)}...`);
+console.log(`🔌 [PayPal Service] Le Secret provient du .env ? : ${process.env.PAYPAL_CLIENT_SECRET ? '✅ OUI' : '❌ NON (Le fichier .env est ignoré ou vide)'}`);
 
 // Générer le token d'accès PayPal
 const generateAccessToken = async () => {
