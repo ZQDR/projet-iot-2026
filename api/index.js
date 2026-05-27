@@ -39,7 +39,11 @@ app.use(['/api/consumption', '/consumption'], consumptionRoutes);
 app.use(['/api/payment', '/payment', '/api/payments', '/payments'], paymentRoutes);
 
 // Route de documentation Swagger (Accessible via Nginx proxy sur /api/api-docs)
-app.use(['/api-docs', '/api/api-docs'], swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(['/api-docs', '/api/api-docs'], swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+    swaggerOptions: {
+        persistAuthorization: true // Garde le token en mémoire même après un F5
+    }
+}));
 
 // Route de test (Ping)
 app.get('/', (req, res) => {
