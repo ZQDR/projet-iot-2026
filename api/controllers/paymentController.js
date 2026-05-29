@@ -131,6 +131,23 @@ exports.createStripeSession = async (req, res) => {
             baseUrl = 'https://recharge.cielnewton.fr';
         }
 
+        // GESTION DES DEEP LINKS (Natif / Expo) vs WEB
+        // On supprime le slash final s'il y en a un pour harmoniser
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        let successUrl, cancelUrl;
+
+        if (cleanBaseUrl.startsWith('http')) {
+            // Environnement Web (https://...)
+            successUrl = `${cleanBaseUrl}/?stripe_session_id={CHECKOUT_SESSION_ID}`;
+            cancelUrl = `${cleanBaseUrl}/`;
+        } else {
+            // Environnement Mobile (Deep Link natif type newtoncharge:// ou exp://)
+            // On ajoute les paramètres à l'URL Scheme sans forcer de chemin web classique
+            const separator = cleanBaseUrl.includes('?') ? '&' : '?';
+            successUrl = `${cleanBaseUrl}${separator}stripe_session_id={CHECKOUT_SESSION_ID}`;
+            cancelUrl = cleanBaseUrl;
+        }
+
         // On demande à Stripe de créer une page de paiement temporaire
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'], // Accepte CB, Google Pay, Apple Pay
@@ -146,9 +163,9 @@ exports.createStripeSession = async (req, res) => {
                 quantity: 1,
             }],
             mode: 'payment',
-            // Redirection vers le dashboard client après paiement
-            success_url: `${baseUrl}/?stripe_session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/`,
+            // Redirection intelligente en fonction de l'environnement (Web vs Mobile)
+            success_url: successUrl,
+            cancel_url: cancelUrl,
             client_reference_id: req.user.id.toString(), // On garde l'ID de l'élève en mémoire
         });
 
