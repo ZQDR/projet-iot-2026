@@ -13,7 +13,11 @@ module.exports = (req, res, next) => {
     }
 
     // 2. Vérifier la signature du token avec le secret du serveur (comme dans authController)
-    const secret = process.env.JWT_SECRET || 'secret_temporaire_secours';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        console.error("[AuthMiddleware] Erreur critique : JWT_SECRET n'est pas défini dans l'environnement !");
+        return res.status(500).json({ error: 'Erreur de configuration du serveur.' });
+    }
 
     jwt.verify(token, secret, async (err, decoded) => {
         if (err) {

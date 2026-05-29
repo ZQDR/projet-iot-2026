@@ -8,9 +8,6 @@ const PAYPAL_CLIENT_SECRET = cleanEnvVar(process.env.PAYPAL_CLIENT_SECRET);
 
 const base = 'https://api-m.sandbox.paypal.com';
 
-console.log(`🔌 [PayPal Service] Client ID utilisé : ${PAYPAL_CLIENT_ID.substring(0, 10)}...`);
-console.log(`🔌 [PayPal Service] Secret utilisé : ${PAYPAL_CLIENT_SECRET.substring(0, 5)}... (longueur: ${PAYPAL_CLIENT_SECRET.length})`);
-
 // Générer le token d'accès PayPal
 const generateAccessToken = async () => {
     try {

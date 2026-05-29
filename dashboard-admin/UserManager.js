@@ -2,6 +2,12 @@ class UserManager {
     constructor(apiUrl) {
         this.apiUrl = apiUrl;
         this.token = null; // Stockera le Master Token Admin
+        this.sanitizer = (str) => {
+            if (!str) return '';
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        };
         this.selectedUserId = null; // ID de l'utilisateur sélectionné
         
         // SÉCURITÉ DOM : On attend que la page soit chargée pour attacher les événements
@@ -234,7 +240,7 @@ class UserManager {
         // Structure flexbox pour aligner le bouton d'info à droite
         li.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <span><b>${username}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€</span>
+                <span><b>${this.sanitizer(username)}</b> - Crédit: <span class="user-balance">${parseFloat(creditAmount).toFixed(2)}</span>€</span>
                 <div>
                     <button class="btn-edit-user" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0; margin-left: 10px;" title="Modifier l'utilisateur">✏️</button>
                     <button class="btn-info-user" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0; margin-left: 10px;" title="Voir les infos de l'utilisateur">ℹ️</button>
@@ -288,10 +294,10 @@ class UserManager {
             const { value: formValues } = await Swal.fire({
                 title: 'Modifier l\'utilisateur',
                 html: `
-                    <input id="edit-username" class="swal2-input" placeholder="Nom d'utilisateur" value="${user.username}">
-                    <input id="edit-email" type="email" class="swal2-input" placeholder="Email" value="${user.email}">
+                    <input id="edit-username" class="swal2-input" placeholder="Nom d'utilisateur" value="${this.sanitizer(user.username)}">
+                    <input id="edit-email" type="email" class="swal2-input" placeholder="Email" value="${this.sanitizer(user.email)}">
                     <input id="edit-password" type="password" class="swal2-input" placeholder="Nouveau mot de passe (optionnel)">
-                    <input id="edit-balance" type="number" step="0.01" class="swal2-input" placeholder="Solde (€)" value="${parseFloat(user.balance).toFixed(2)}">
+                    <input id="edit-balance" type="number" step="0.01" class="swal2-input" placeholder="Solde (€)" value="${this.sanitizer(parseFloat(user.balance).toFixed(2))}">
                     <small style="color: #7f8c8d; display: block; margin-top: 5px;">Laissez le mot de passe vide pour ne pas le modifier.</small>
                 `,
                 focusConfirm: false,
@@ -362,7 +368,7 @@ class UserManager {
                 return `
                     <tr>
                         <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em;">${dateTx}</td>
-                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em;">${tx.description || tx.type}</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em;">${this.sanitizer(tx.description || tx.type)}</td>
                         <td style="padding: 5px; border-bottom: 1px solid #eee; font-size: 0.9em; color: ${color}; font-weight: bold;">${sign}${parseFloat(tx.amount).toFixed(2)}€</td>
                     </tr>
                 `;
@@ -373,13 +379,13 @@ class UserManager {
             }
 
             Swal.fire({
-                title: `Profil de ${user.username}`,
+                title: `Profil de ${this.sanitizer(user.username)}`,
                 html: `
                     <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.95em;">
-                        <p style="margin: 5px 0;">📧 <b>Email:</b> ${user.email}</p>
-                        <p style="margin: 5px 0;">💰 <b>Solde actuel:</b> <span style="color:#2980b9; font-weight:bold;">${parseFloat(user.balance).toFixed(2)}€</span></p>
-                        <p style="margin: 5px 0;">📅 <b>Inscrit le:</b> ${dateInscr}</p>
-                        <p style="margin: 5px 0; color: #7f8c8d;" title="${user.password}">🔑 <b>Mot de passe:</b> Haché et sécurisé en BDD (Survolez pour voir le hash)</p>
+                        <p style="margin: 5px 0;">📧 <b>Email:</b> ${this.sanitizer(user.email)}</p>
+                        <p style="margin: 5px 0;">💰 <b>Solde actuel:</b> <span style="color:#2980b9; font-weight:bold;">${this.sanitizer(parseFloat(user.balance).toFixed(2))}€</span></p>
+                        <p style="margin: 5px 0;">📅 <b>Inscrit le:</b> ${this.sanitizer(dateInscr)}</p>
+                        <p style="margin: 5px 0; color: #7f8c8d;">🔑 <b>Mot de passe:</b> Haché et sécurisé en BDD</p>
                     </div>
                     <h4 style="margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #3498db; display: inline-block;">Dernières Transactions</h4>
                     <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px;">

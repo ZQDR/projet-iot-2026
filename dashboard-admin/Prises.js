@@ -4,6 +4,12 @@ class PriseManager {
         this.apiUrl = apiUrl;
         this.userManager = userManager; // Pour récupérer le token
         this.prises = []
+        this.sanitizer = (str) => {
+            if (!str) return '';
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        };
         this.tableBody = document.getElementById("priseTableBody")
         this.btnAddPrise = document.getElementById("btnAddPrise")
         this.btnDeletePrise = document.getElementById("btnDeletePrise")
@@ -288,7 +294,8 @@ class PriseManager {
 
                 if (rawStatus === 'occupied' && currentUsername) {
                     // On remplace le texte simple par un span cliquable (lien bleu souligné)
-                    htmlContent = `Occupée par <span class="clickable-username" data-username="${currentUsername}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${currentUsername}">${currentUsername}</span> (${textState})`;
+                    const sanitizedUsername = this.sanitizer(currentUsername);
+                    htmlContent = `Occupée par <span class="clickable-username" data-username="${sanitizedUsername}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${sanitizedUsername}">${sanitizedUsername}</span> (${textState})`;
                 } else {
                     htmlContent = `${displayStatus} (${textState})`;
                 }
@@ -579,7 +586,8 @@ class PriseManager {
             const elecState = prise.state ? "⚡ ALLUMÉE" : "ÉTEINTE";
             
             if (prise.status === 'occupied' && tr.dataset.username) {
-                tdEtat.innerHTML = `Occupée par <span class="clickable-username" data-username="${tr.dataset.username}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${tr.dataset.username}">${tr.dataset.username}</span> (${elecState})`;
+                const sanitizedUsername = this.sanitizer(tr.dataset.username);
+                tdEtat.innerHTML = `Occupée par <span class="clickable-username" data-username="${sanitizedUsername}" style="color: #ffffff !important; background-color: #3498db; padding: 3px 10px; border-radius: 12px; cursor: pointer; font-size: 0.9em; font-weight: bold; display: inline-block; margin: 0 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Cliquer pour voir l'historique de ${sanitizedUsername}">${sanitizedUsername}</span> (${elecState})`;
             } else {
                 tdEtat.textContent = `${displayStatus} (${elecState})`;
             }
@@ -602,9 +610,9 @@ class PriseManager {
                 if (printWindow) {
                     printWindow.document.write(`
                         <html>
-                            <head><title>QR Code - ${prise.id}</title></head>
+                            <head><title>QR Code - ${this.sanitizer(prise.id)}</title></head>
                             <body style="text-align:center; font-family:sans-serif; margin-top:50px;">
-                                <h1>Prise : ${prise.id}</h1>
+                                <h1>Prise : ${this.sanitizer(prise.id)}</h1>
                                 <img src="${url}" style="width:300px; height:300px; border:2px solid #333;" onload="window.print();">
                                 <p>Scannez ce code pour démarrer la recharge.</p>
                             </body>

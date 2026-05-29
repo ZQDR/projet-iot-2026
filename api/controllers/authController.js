@@ -64,10 +64,15 @@ exports.login = async (req, res) => {
             return res.status(401).json({ error: 'Identifiants incorrects.' });
         }
 
+        if (!process.env.JWT_SECRET) {
+            console.error("[AuthController] Erreur critique : JWT_SECRET n'est pas défini dans l'environnement !");
+            return res.status(500).json({ error: 'Erreur de configuration du serveur.' });
+        }
+
         // Générer le Token
         const token = jwt.sign(
             { id: user.id, email: user.email },
-            process.env.JWT_SECRET || 'secret_temporaire_secours', // Fallback si .env vide
+            process.env.JWT_SECRET,
             { expiresIn: '72h' }
         );
 
@@ -126,7 +131,6 @@ exports.getUserHistory = async (req, res) => {
             user: {
                 username: targetUser.username,
                 email: targetUser.email,
-                password: targetUser.password, // Le mot de passe est hashé en BDD
                 balance: targetUser.balance,
                 created_at: targetUser.created_at
             }
