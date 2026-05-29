@@ -190,11 +190,30 @@
         <div id="plugCostDisplay">💰 Coût de session : 0.00 €</div>
     </div>
 
-    <!-- NOUVEAU BLOC RGPD -->
-    <div class="card" style="margin-top: 20px; border-left: 4px solid #343a40;">
-        <h3>🛡️ Vie privée (RGPD)</h3>
+    <!-- BOUTON HISTORIQUE & TRANSACTIONS -->
+    <button id="btnToggleHistory" class="btn-logout" style="background-color: #17a2b8; margin-top: 20px; text-align: left; padding: 12px 15px;">
+        📊 Historique & Transactions <span style="float: right;">▼</span>
+    </button>
+
+    <div id="historySection" class="card" style="display: none; margin-top: 10px; border-left: 4px solid #17a2b8; max-height: 400px; overflow-y: auto; padding-right: 15px;">
+        <h3 style="margin-top: 0; font-size: 1.2em;">⚡ Dernières Charges</h3>
+        <div id="consumptionHistoryList" style="font-size: 0.9em; margin-bottom: 20px;">Chargement...</div>
+
+        <h3 style="margin-top: 0; font-size: 1.2em;">💳 Dernières Transactions</h3>
+        <div id="transactionHistoryList" style="font-size: 0.9em;">Chargement...</div>
+    </div>
+
+    <!-- BOUTON POUR DÉROULER LES PARAMÈTRES RGPD -->
+    <button id="btnToggleRGPD" class="btn-logout" style="background-color: #6c757d; margin-top: 20px; text-align: left; padding: 12px 15px;">
+        ⚙️ Paramètres de vie privée (RGPD) <span style="float: right;">▼</span>
+    </button>
+
+    <!-- BLOC RGPD (Masqué par défaut via display: none) -->
+    <div id="rgpdSection" class="card" style="display: none; margin-top: 10px; border-left: 4px solid #343a40;">
+        <h3 style="margin-top: 0;">🛡️ Vie privée</h3>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Gérez vos données personnelles conformément au RGPD.</p>
         <button id="btnExportRGPD" class="btn-primary" style="background-color: #17a2b8; margin-bottom: 10px;">💾 Exporter mes données (JSON)</button>
-        <button id="btnDeleteAccountRGPD" class="btn-stop">🗑️ Supprimer mon compte</button>
+        <button id="btnDeleteAccountRGPD" class="btn-stop" style="margin-top: 0;">🗑️ Supprimer mon compte</button>
     </div>
 
     <button class="btn-logout" onclick="logout()">Déconnexion</button>
@@ -270,6 +289,7 @@
                 initWebSocket();
                 loadPayPalScript(); // Charge le SDK avec le Client ID du serveur, puis initie le bouton
                 initRGPD(); // Initialiser les boutons RGPD
+                initHistoryToggle(); // Initialiser le bouton Historique
             } else {
                 errorMsg.innerText = "Email ou mot de passe incorrect.";
                 errorMsg.style.display = "block";
@@ -548,6 +568,94 @@
     function initRGPD() {
         const rgpdManager = new RGPDManager(API_URL, () => localStorage.getItem('jwtToken'));
         rgpdManager.init('btnExportRGPD', 'btnDeleteAccountRGPD');
+
+        // Gestion de l'affichage/masquage du panneau RGPD
+        const btnToggle = document.getElementById('btnToggleRGPD');
+        const rgpdSection = document.getElementById('rgpdSection');
+        if (btnToggle && rgpdSection) {
+            btnToggle.onclick = function() {
+                if (rgpdSection.style.display === 'none') {
+                    rgpdSection.style.display = 'block';
+                    btnToggle.innerHTML = '⚙️ Paramètres de vie privée (RGPD) <span style="float: right;">▲</span>';
+                } else {
+                    rgpdSection.style.display = 'none';
+                    btnToggle.innerHTML = '⚙️ Paramètres de vie privée (RGPD) <span style="float: right;">▼</span>';
+                }
+            };
+        }
+    }
+
+    // --- 3e. INIT HISTORIQUE ---
+    function initHistoryToggle() {
+        const btnToggle = document.getElementById('btnToggleHistory');
+        const historySection = document.getElementById('historySection');
+        let isLoaded = false; // Permet de ne charger qu'une seule fois via l'API
+
+        if (btnToggle && historySection) {
+            btnToggle.onclick = async function() {
+                if (historySection.style.display === 'none') {
+                    historySection.style.display = 'block';
+                    btnToggle.innerHTML = '📊 Historique & Transactions <span style="float: right;">▲</span>';
+                    if (!isLoaded) {
+                        await loadUserHistory();
+                        isLoaded = true;
+                    }
+                } else {
+                    historySection.style.display = 'none';
+                    btnToggle.innerHTML = '📊 Historique & Transactions <span style="float: right;">▼</span>';
+                }
+            };
+        }
+    }
+
+    async function loadUserHistory() {
+        if (!myUserId) return;
+        const token = localStorage.getItem('jwtToken');
+        try {
+            const response = await fetch(`${API_URL}/auth/users/${myUserId}/history`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Rendu de l'historique des charges
+                const consContainer = document.getElementById('consumptionHistoryList');
+                if (data.history && data.history.length > 0) {
+                    consContainer.innerHTML = data.history.map(session => {
+                        const date = new Date(session.start_time).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+                        const cost = parseFloat(session.cost || 0).toFixed(2);
+                        const energy = parseFloat(session.energy_kwh || 0).toFixed(3);
+                        return `<div style="padding: 8px 0; border-bottom: 1px solid #ddd;">
+                            <strong>Prise ${session.plug_id}</strong> - <span style="color:#666;">${date}</span><br>
+                            Énergie : ${energy} kWh | Coût : <b style="color:var(--primary);">${cost} €</b>
+                        </div>`;
+                    }).join('');
+                } else {
+                    consContainer.innerHTML = '<p style="color: #777;">Aucune charge récente.</p>';
+                }
+
+                // Rendu de l'historique des paiements/transactions
+                const transContainer = document.getElementById('transactionHistoryList');
+                if (data.transactions && data.transactions.length > 0) {
+                    transContainer.innerHTML = data.transactions.map(tx => {
+                        const date = new Date(tx.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+                        const amount = parseFloat(tx.amount).toFixed(2);
+                        const color = tx.amount >= 0 ? 'green' : 'red';
+                        const sign = tx.amount > 0 ? '+' : '';
+                        return `<div style="padding: 8px 0; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size:0.95em;"><span style="color:#666; font-size:0.9em;">${date}</span><br>${tx.description || tx.type}</span>
+                            <strong style="color: ${color}; font-size:1.1em;">${sign}${amount} €</strong>
+                        </div>`;
+                    }).join('');
+                } else {
+                    transContainer.innerHTML = '<p style="color: #777;">Aucune transaction récente.</p>';
+                }
+            }
+        } catch (err) {
+            console.error("Erreur chargement historique:", err);
+            document.getElementById('consumptionHistoryList').innerText = "Erreur de chargement.";
+            document.getElementById('transactionHistoryList').innerText = "Erreur de chargement.";
+        }
     }
 
     // --- 4. WEBSOCKET (Temps réel) ---
@@ -700,6 +808,7 @@
             loadPayPalScript();
             checkStripeReturn();
             initRGPD(); // Initialiser les boutons RGPD au rechargement de page
+            initHistoryToggle(); // Initialiser l'historique
         })();
     }
 </script>
