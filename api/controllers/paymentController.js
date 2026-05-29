@@ -8,7 +8,7 @@ const db = require('../config/db'); // Nécessaire pour vérifier les doublons
 // ÉTAPE 1 : Le Front demande la permission de payer (Appelé par createOrder dans paypalManager.js)
 exports.createPayPalOrder = async (req, res) => {
     try {
-        const { amount } = req.body;
+        const { amount, returnUrl } = req.body;
 
         if (!amount || isNaN(amount) || amount <= 0) {
             return res.status(400).json({ error: "Montant invalide ou manquant dans la requête. Attendu : { 'amount': '10.00' }" });
@@ -23,8 +23,23 @@ exports.createPayPalOrder = async (req, res) => {
         // PayPal exige un format de prix très strict (chaîne de caractères avec 2 décimales, ex: "10.00")
         const formattedAmount = parseFloat(amount).toFixed(2).toString();
 
+        // --- GESTION INTELLIGENTE WEB VS MOBILE POUR PAYPAL ---
+        let finalReturnUrl = 'https://recharge.cielnewton.fr/';
+        let finalCancelUrl = 'https://recharge.cielnewton.fr/';
+        
+        if (returnUrl) {
+            // 1. C'est l'App Mobile (Elle a fourni son propre Deep Link type newtoncharge://)
+            finalReturnUrl = returnUrl;
+            const separator = returnUrl.includes('?') ? '&' : '?';
+            finalCancelUrl = `${returnUrl}${separator}cancel=true`;
+        } else if (req.headers.origin) {
+            // 2. C'est le Dashboard Web (On utilise l'URL du navigateur, ex: http://localhost:8080)
+            finalReturnUrl = `${req.headers.origin}/`;
+            finalCancelUrl = `${req.headers.origin}/`;
+        }
+
         // Création de la commande via notre nouveau service basé sur fetch
-        const orderData = await paypalService.createOrder(formattedAmount);
+        const orderData = await paypalService.createOrder(formattedAmount, finalReturnUrl, finalCancelUrl);
 
         // VÉRIFICATION : Si PayPal n'a pas renvoyé d'ID (ex: problème d'identifiants ou de réseau)
         if (!orderData || !orderData.id) {
