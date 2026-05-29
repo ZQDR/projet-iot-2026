@@ -68,8 +68,8 @@ VALUES (
 );
 INSERT IGNORE INTO users (username, email, password, role, balance) 
 VALUES (
-    'La Pulga de Tel Aviv', 
-    'lapulga@gmail.com', 
+    'Yanis Fondateur', 
+    'fondateur@cielnewton.fr', 
     '$2b$10$uM7RrbJSqt.kSLEr.H9FUuUxBxrJJ9JS9HQH/7ldjmDCpKGSCCs9e', 
     'admin', 
     99999999
