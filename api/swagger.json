@@ -32,7 +32,8 @@
   "tags": [
     { "name": "Auth", "description": "Authentification et gestion des utilisateurs" },
     { "name": "Plugs", "description": "Gestion et contrôle des prises connectées" },
-    { "name": "Paiements", "description": "Rechargement de solde via PayPal ou Stripe" }
+    { "name": "Paiements", "description": "Rechargement de solde via PayPal ou Stripe" },
+    { "name": "Consommation", "description": "Historique de consommation et transactions" }
   ],
   "paths": {
     "/auth/login": {
@@ -293,6 +294,17 @@
         }
       }
     },
+    "/auth/export": {
+      "get": {
+        "summary": "Exporter ses propres données personnelles au format JSON (RGPD)",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "Fichier JSON contenant le profil, l'historique et les transactions" },
+          "404": { "description": "Utilisateur introuvable" },
+          "500": { "description": "Erreur serveur lors de l'export" }
+        }
+      }
+    },
     "/auth/push-token": {
       "post": {
         "summary": "Sauvegarder le token de notification Push (Expo)",
@@ -313,6 +325,148 @@
         "responses": {
           "200": { "description": "Token Push sauvegardé avec succès" },
           "400": { "description": "Format de token invalide ou manquant" }
+        }
+      }
+    },
+    "/plugs/alerts": {
+      "get": {
+        "summary": "Récupérer les alertes réseau et maintenance des prises (Admin)",
+        "tags": ["Plugs"],
+        "responses": {
+          "200": { "description": "Liste des prises en erreur (tension, perte ping, HS)" },
+          "500": { "description": "Erreur lors de l'analyse du réseau" }
+        }
+      }
+    },
+    "/plugs/{plugId}": {
+      "delete": {
+        "summary": "Supprimer définitivement une prise (Admin)",
+        "tags": ["Plugs"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugId",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de la prise (ex: S1-01)"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Prise supprimée avec succès" },
+          "400": { "description": "Impossible de supprimer (historique existant)" },
+          "500": { "description": "Erreur serveur" }
+        }
+      }
+    },
+    "/plugs/{plugId}/maintenance": {
+      "post": {
+        "summary": "Basculer l'état de maintenance d'une prise (Admin)",
+        "tags": ["Plugs"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugId",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de la prise"
+          }
+        ],
+        "responses": {
+          "200": { "description": "État de la maintenance basculé avec succès (libre/hs)" },
+          "404": { "description": "Prise introuvable" },
+          "500": { "description": "Erreur lors du changement de maintenance" }
+        }
+      }
+    },
+    "/plugs/{plugId}/force-stop": {
+      "post": {
+        "summary": "Forcer l'arrêt d'une prise occupée (Admin)",
+        "tags": ["Plugs"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugId",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de la prise"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Session arrêtée de force avec succès" },
+          "400": { "description": "Aucune session en cours sur cette prise" },
+          "404": { "description": "Prise introuvable" },
+          "500": { "description": "Erreur lors de l'arrêt forcé" }
+        }
+      }
+    },
+    "/plugs/{plugId}/configure": {
+      "post": {
+        "summary": "Configurer une limite de puissance sur la prise via MQTT (Admin)",
+        "tags": ["Plugs"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugId",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "L'identifiant de la prise"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "powerLimit": { "type": "number", "example": 2500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Configuration envoyée à la prise" },
+          "404": { "description": "Prise introuvable" },
+          "500": { "description": "Erreur lors de la configuration" }
+        }
+      }
+    },
+    "/plugs/{plugId}/reboot": {
+      "post": {
+        "summary": "Redémarrer électriquement la prise via RPC Shelly (Admin)",
+        "tags": ["Plugs"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Ordre de redémarrage envoyé" },
+          "500": { "description": "Erreur lors du redémarrage" }
+        }
+      }
+    },
+    "/consumption/me": {
+      "get": {
+        "summary": "Récupérer son historique de sessions de charge",
+        "tags": ["Consommation"],
+        "responses": {
+          "200": { "description": "Liste des sessions de l'utilisateur connecté" },
+          "500": { "description": "Impossible de récupérer l'historique" }
+        }
+      }
+    },
+    "/consumption/transactions": {
+      "get": {
+        "summary": "Récupérer son historique financier (recharges et paiements)",
+        "tags": ["Consommation"],
+        "responses": {
+          "200": { "description": "Liste des mouvements d'argent du compte" },
+          "500": { "description": "Impossible de récupérer les transactions" }
         }
       }
     },

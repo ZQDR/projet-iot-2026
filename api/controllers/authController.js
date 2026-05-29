@@ -260,3 +260,32 @@ exports.savePushToken = async (req, res) => {
         res.status(500).json({ error: 'Erreur lors de la sauvegarde du token.' });
     }
 };
+
+// EXPORT DES DONNÉES (RGPD - Droit à la portabilité)
+exports.exportUserData = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        const user = await UserModel.findById(userId);
+        if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+        if (user.password) delete user.password; // Sécurité
+
+        const history = await UserModel.getHistory(userId);
+        const [transactions] = await db.execute('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+
+        const exportData = {
+            profile: user,
+            consumption_history: history,
+            transactions: transactions,
+            exported_at: new Date().toISOString()
+        };
+
+        // Force le navigateur à télécharger un fichier JSON
+        res.setHeader('Content-disposition', `attachment; filename=export_donnees_newton_${userId}.json`);
+        res.setHeader('Content-type', 'application/json');
+        res.send(JSON.stringify(exportData, null, 2));
+    } catch (err) {
+        console.error("Erreur lors de l'export RGPD:", err);
+        res.status(500).json({ error: 'Erreur lors de l\'export des données.' });
+    }
+};

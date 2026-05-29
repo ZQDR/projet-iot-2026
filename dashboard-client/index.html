@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <script src="./paypalManager.js"></script>
+    <script src="./rgpdManager.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -189,6 +190,13 @@
         <div id="plugCostDisplay">💰 Coût de session : 0.00 €</div>
     </div>
 
+    <!-- NOUVEAU BLOC RGPD -->
+    <div class="card" style="margin-top: 20px; border-left: 4px solid #343a40;">
+        <h3>🛡️ Vie privée (RGPD)</h3>
+        <button id="btnExportRGPD" class="btn-primary" style="background-color: #17a2b8; margin-bottom: 10px;">💾 Exporter mes données (JSON)</button>
+        <button id="btnDeleteAccountRGPD" class="btn-stop">🗑️ Supprimer mon compte</button>
+    </div>
+
     <button class="btn-logout" onclick="logout()">Déconnexion</button>
 </div>
 
@@ -261,6 +269,7 @@
                 await loadPlugs();
                 initWebSocket();
                 loadPayPalScript(); // Charge le SDK avec le Client ID du serveur, puis initie le bouton
+                initRGPD(); // Initialiser les boutons RGPD
             } else {
                 errorMsg.innerText = "Email ou mot de passe incorrect.";
                 errorMsg.style.display = "block";
@@ -535,6 +544,12 @@
         }
     }
 
+    // --- 3d. INIT RGPD ---
+    function initRGPD() {
+        const rgpdManager = new RGPDManager(API_URL, () => localStorage.getItem('jwtToken'));
+        rgpdManager.init('btnExportRGPD', 'btnDeleteAccountRGPD');
+    }
+
     // --- 4. WEBSOCKET (Temps réel) ---
     function initWebSocket() {
         if(socket) return; // Évite de connecter deux fois
@@ -684,6 +699,7 @@
             initWebSocket();
             loadPayPalScript();
             checkStripeReturn();
+            initRGPD(); // Initialiser les boutons RGPD au rechargement de page
         })();
     }
 </script>
