@@ -257,7 +257,7 @@ class ChatbotManager {
             document.getElementById(typingId)?.remove();
             
             // Affichage de la réponse du serveur IA
-            if (response.ok && data.reply) {
+            if (data.reply) {
                 this.addMessage('bot', data.reply);
             } else {
                 this.addMessage('bot', `⚠️ Erreur : ${data.error || "Je n'ai pas pu générer une réponse."}`);
