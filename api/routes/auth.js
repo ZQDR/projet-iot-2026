@@ -44,4 +44,10 @@ router.get('/export', authMiddleware, authController.exportUserData);
 // Privé : Sauvegarder le token Expo Push (Mobile)
 router.post('/push-token', authMiddleware, authController.savePushToken);
 
+// --- NOUVEAU : SYSTÈME DE DEMANDE D'INSCRIPTION (Salles d'attente) ---
+router.post('/request-registration', authController.requestRegistration); // Accessible à tous
+router.get('/pending-requests', authMiddleware, adminMiddleware, authController.getPendingRequests);
+router.post('/pending-requests/:id/approve', authMiddleware, adminMiddleware, authController.approveRequest);
+router.delete('/pending-requests/:id/reject', authMiddleware, adminMiddleware, authController.rejectRequest);
+
 module.exports = router;

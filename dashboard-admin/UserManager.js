@@ -16,11 +16,13 @@ class UserManager {
                 this.initDeleteButton();
                 this.initSearch();
                 this.initSocket();
+                this.initPendingRequestsUI(); // <-- NOUVEAU
             });
         } else {
             this.initDeleteButton();
             this.initSearch();
             this.initSocket();
+            this.initPendingRequestsUI(); // <-- NOUVEAU
         }
     }
 
@@ -49,6 +51,20 @@ class UserManager {
             // NOUVEAU: Rafraîchissement complet (création, suppression, recharge PayPal, arrêt charge)
             this.socket.on('user_data_updated', () => {
                 this.fetchAllUsers();
+            });
+
+            // NOUVEAU: Alertes Salles d'attente
+            this.socket.on('new_registration_request', (data) => {
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'info',
+                    title: `Nouvelle demande : ${data.username}`,
+                    showConfirmButton: false, timer: 5000
+                });
+                this.fetchPendingRequests(true); // Met à jour la pastille rouge
+            });
+
+            this.socket.on('registration_request_handled', () => {
+                this.fetchPendingRequests(true);
             });
         }
     }
@@ -84,6 +100,7 @@ class UserManager {
                 this.token = data.token;
                 console.log("✅ Dashboard connecté en tant qu'Admin.");
                 this.fetchAllUsers(); // <--- Une fois connecté, on charge la liste
+                this.fetchPendingRequests(true); // <--- Charge la cloche de notification
                 return true;
             }
             return false;
@@ -412,6 +429,152 @@ class UserManager {
         } catch (e) {
             console.error(e);
             Swal.fire('Erreur', 'Impossible de charger les informations de l\'utilisateur.', 'error');
+        }
+    }
+
+    // --- NOUVEAU : GESTION DES DEMANDES EN ATTENTE ---
+    
+    initPendingRequestsUI() {
+        const bellBtn = document.createElement('button');
+        bellBtn.id = 'btnPendingRequests';
+        bellBtn.innerHTML = `🔔 Demandes <span id="reqBadge" style="background:#e74c3c; color:white; border-radius:50%; padding:2px 6px; font-size:12px; display:none; margin-left:5px;">0</span>`;
+        bellBtn.style.cssText = "position: fixed; bottom: 20px; right: 20px; z-index: 1000; padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-size: 14px; transition: 0.3s;";
+        
+        bellBtn.onmouseover = () => bellBtn.style.transform = "scale(1.05)";
+        bellBtn.onmouseout = () => bellBtn.style.transform = "scale(1)";
+        
+        bellBtn.addEventListener('click', () => this.showPendingRequestsModal());
+        document.body.appendChild(bellBtn);
+    }
+
+    async fetchPendingRequests(silent = false) {
+        if (!this.token) return;
+        try {
+            const response = await fetch(`${this.apiUrl}/auth/pending-requests`, {
+                headers: { "Authorization": `Bearer ${this.token}` }
+            });
+            if (response.ok) {
+                this.pendingRequests = await response.json();
+                const badge = document.getElementById('reqBadge');
+                if (badge) {
+                    badge.textContent = this.pendingRequests.length;
+                    badge.style.display = this.pendingRequests.length > 0 ? 'inline-block' : 'none';
+                }
+                if (!silent) this.showPendingRequestsModal();
+            }
+        } catch (e) {
+            console.error("Erreur chargement des demandes:", e);
+        }
+    }
+
+    async showPendingRequestsModal() {
+        if (!this.pendingRequests || this.pendingRequests.length === 0) {
+            Swal.fire('Info', 'Aucune demande de création de compte en attente.', 'info');
+            return;
+        }
+
+        let html = '<ul style="list-style:none; padding:0; text-align:left;">';
+        this.pendingRequests.forEach(req => {
+            const dateStr = new Date(req.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            html += `
+                <li style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; background:#f9f9f9;">
+                    <div>
+                        <strong style="color:#2c3e50; font-size:1.1em;">${this.sanitizer(req.username)}</strong><br/>
+                        <span style="color:#7f8c8d; font-size:0.9em;">${this.sanitizer(req.email)}</span><br/>
+                        <small style="color:#bdc3c7;">Le ${dateStr}</small>
+                    </div>
+                    <div>
+                        <button onclick="userManager.approveRequest(${req.id}, '${this.sanitizer(req.username).replace(/'/g, "\\'")}')" style="background:#27ae60; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold; margin-right:5px;">✅ Valider</button>
+                        <button onclick="userManager.rejectRequest(${req.id}, '${this.sanitizer(req.username).replace(/'/g, "\\'")}')" style="background:#e74c3c; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">❌ Refuser</button>
+                    </div>
+                </li>
+            `;
+        });
+        html += '</ul>';
+
+        Swal.fire({
+            title: 'Salles d\'attente',
+            html: html,
+            width: '600px',
+            showConfirmButton: true,
+            confirmButtonText: 'Fermer',
+            confirmButtonColor: '#3498db'
+        });
+    }
+
+    async approveRequest(id, username) {
+        Swal.close(); // Ferme la liste pour ouvrir la popup de validation
+        
+        const { value: initialBalance } = await Swal.fire({
+            title: `Valider le compte de ${username}`,
+            input: 'number',
+            inputLabel: 'Attribuer un solde initial (€) :',
+            inputValue: 67.00,
+            showCancelButton: true,
+            confirmButtonText: 'Créer le compte',
+            cancelButtonText: 'Annuler',
+            confirmButtonColor: '#27ae60',
+            inputValidator: (value) => {
+                if (!value || value < 0) return 'Veuillez entrer un montant valide.';
+            }
+        });
+
+        if (initialBalance) {
+            Swal.fire({ title: 'Validation...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const response = await fetch(`${this.apiUrl}/auth/pending-requests/${id}/approve`, {
+                    method: 'POST',
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${this.token}`
+                    },
+                    body: JSON.stringify({ initialBalance: parseFloat(initialBalance) })
+                });
+                
+                if (response.ok) {
+                    Swal.fire('Succès !', 'L\'élève a été validé et son compte est créé.', 'success');
+                } else {
+                    const err = await response.json();
+                    Swal.fire('Erreur', err.error || 'Erreur lors de la validation.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Erreur', 'Erreur réseau.', 'error');
+            }
+        } else {
+            // S'il annule, on rouvre la liste
+            this.showPendingRequestsModal();
+        }
+    }
+
+    async rejectRequest(id, username) {
+        Swal.close();
+        const confirm = await Swal.fire({
+            title: 'Refuser la demande ?',
+            text: `Rejeter et supprimer définitivement l'inscription de ${username} ?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e74c3c',
+            confirmButtonText: 'Oui, refuser',
+            cancelButtonText: 'Annuler'
+        });
+
+        if (confirm.isConfirmed) {
+            try {
+                const response = await fetch(`${this.apiUrl}/auth/pending-requests/${id}/reject`, {
+                    method: 'DELETE',
+                    headers: { "Authorization": `Bearer ${this.token}` }
+                });
+                
+                if (response.ok) {
+                    Swal.fire('Refusé', 'La demande a été rejetée.', 'success');
+                } else {
+                    Swal.fire('Erreur', 'Erreur lors du rejet de la demande.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Erreur', 'Erreur réseau.', 'error');
+            }
+        } else {
+            this.showPendingRequestsModal();
         }
     }
 

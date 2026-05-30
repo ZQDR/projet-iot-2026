@@ -638,6 +638,92 @@
           "500": { "description": "Erreur serveur ou de communication avec Stripe" }
         }
       }
+    },
+    "/auth/request-registration": {
+      "post": {
+        "summary": "Soumettre une demande de création de compte (Public)",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": { "type": "string", "example": "Mehdi" },
+                  "lastName": { "type": "string", "example": "Newton" },
+                  "email": { "type": "string", "example": "mehdi@mail.com" },
+                  "password": { "type": "string", "example": "motdepassesecret" },
+                  "rgpdConsent": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Demande envoyée" },
+          "400": { "description": "Données invalides ou email existant" }
+        }
+      }
+    },
+    "/auth/pending-requests": {
+      "get": {
+        "summary": "Lister les demandes d'inscription en attente (Admin)",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "Liste des demandes" }
+        }
+      }
+    },
+    "/auth/pending-requests/{id}/approve": {
+      "post": {
+        "summary": "Valider une demande d'inscription et créer le compte (Admin)",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "initialBalance": { "type": "number", "example": 67.00 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Compte créé" },
+          "404": { "description": "Demande introuvable" }
+        }
+      }
+    },
+    "/auth/pending-requests/{id}/reject": {
+      "delete": {
+        "summary": "Refuser et supprimer une demande d'inscription (Admin)",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Demande rejetée" },
+          "404": { "description": "Demande introuvable" }
+        }
+      }
     }
   }
 }

@@ -7,6 +7,7 @@ require('dotenv').config();
 const db = require('../config/db');
 const mqttService = require('../services/mqttService');
 const socketService = require('../services/socketService');
+const emailService = require('../services/emailService');
 
 // INSCRIPTION
 exports.register = async (req, res) => {
@@ -287,5 +288,110 @@ exports.exportUserData = async (req, res) => {
     } catch (err) {
         console.error("Erreur lors de l'export RGPD:", err);
         res.status(500).json({ error: 'Erreur lors de l\'export des données.' });
+    }
+};
+
+// --- NOUVEAU : SYSTÈME DE DEMANDE D'INSCRIPTION (Salles d'attente) ---
+
+// 1. Soumettre une demande (Public - Dashboard Client)
+exports.requestRegistration = async (req, res) => {
+    try {
+        const { firstName, lastName, email, password, rgpdConsent } = req.body;
+
+        if (!firstName || !lastName || !email || !password || !rgpdConsent) {
+            return res.status(400).json({ error: 'Tous les champs et le consentement RGPD sont obligatoires.' });
+        }
+
+        const username = `${firstName} ${lastName}`;
+
+        // Vérifier si l'email existe déjà dans les utilisateurs actifs
+        const existingUser = await UserModel.findByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ error: 'Cet email est déjà utilisé par un compte actif.' });
+        }
+
+        // Vérifier si une demande est déjà en attente pour cet email
+        const [existingRequest] = await db.execute('SELECT id FROM registration_requests WHERE email = ?', [email]);
+        if (existingRequest.length > 0) {
+            return res.status(400).json({ error: 'Une demande est déjà en cours pour cet email.' });
+        }
+
+        // Hasher le mot de passe avant même de le stocker en salle d'attente (Sécurité absolue)
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        // Insérer la demande
+        await db.execute(
+            'INSERT INTO registration_requests (username, email, password, rgpd_consent) VALUES (?, ?, ?, ?)',
+            [username, email, hash, rgpdConsent ? 1 : 0]
+        );
+
+        // Crier dans le WebSocket pour réveiller le Dashboard Admin en temps réel
+        socketService.emit('new_registration_request', { message: 'Nouvelle demande de création de compte', username });
+
+        res.status(201).json({ message: 'Demande envoyée avec succès. En attente de validation par un administrateur.' });
+    } catch (err) {
+        console.error("Erreur requestRegistration:", err);
+        res.status(500).json({ error: 'Erreur serveur lors de la demande.' });
+    }
+};
+
+// 2. Lister les demandes en attente (Admin seulement)
+exports.getPendingRequests = async (req, res) => {
+    try {
+        const [requests] = await db.execute('SELECT id, username, email, created_at FROM registration_requests ORDER BY created_at ASC');
+        res.json(requests);
+    } catch (err) {
+        console.error("Erreur getPendingRequests:", err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
+};
+
+// 3. Approuver une demande (Admin seulement)
+exports.approveRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { initialBalance } = req.body;
+        const balance = initialBalance !== undefined ? parseFloat(initialBalance) : 67.00;
+
+        // Récupérer la demande
+        const [requests] = await db.execute('SELECT * FROM registration_requests WHERE id = ?', [id]);
+        if (requests.length === 0) return res.status(404).json({ error: 'Demande introuvable.' });
+        const request = requests[0];
+
+        // Transfert officiel dans la table `users` (Le mot de passe est déjà hashé)
+        const userId = await UserModel.create(request.username, request.email, request.password, balance);
+
+        // Supprimer de la salle d'attente
+        await db.execute('DELETE FROM registration_requests WHERE id = ?', [id]);
+
+        // Mettre à jour les dashboards
+        socketService.emit('user_data_updated', { userId });
+        socketService.emit('registration_request_handled', { id });
+
+        // 📧 Envoyer l'email de bienvenue
+        await emailService.sendWelcomeEmail(request.email, request.username, balance);
+
+        res.json({ message: 'Compte validé et créé avec succès !', userId });
+    } catch (err) {
+        console.error("Erreur approveRequest:", err);
+        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Cet email a déjà été validé.' });
+        res.status(500).json({ error: 'Erreur serveur lors de la validation.' });
+    }
+};
+
+// 4. Refuser une demande (Admin seulement)
+exports.rejectRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [result] = await db.execute('DELETE FROM registration_requests WHERE id = ?', [id]);
+        
+        if (result.affectedRows === 0) return res.status(404).json({ error: 'Demande introuvable.' });
+
+        socketService.emit('registration_request_handled', { id });
+        res.json({ message: 'Demande refusée et supprimée.' });
+    } catch (err) {
+        console.error("Erreur rejectRequest:", err);
+        res.status(500).json({ error: 'Erreur serveur lors du rejet.' });
     }
 };

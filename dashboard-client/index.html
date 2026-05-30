@@ -145,6 +145,13 @@
     </div>
     <button class="btn-primary" onclick="login()">Se connecter</button>
     <p id="loginError" style="color: red; text-align: center; display: none;"></p>
+    
+    <p style="text-align: center; margin-top: 15px;">
+        Nouveau membre ? 
+        <a href="#" onclick="showRegistrationForm(); return false;" style="color: #3498db; font-weight: bold; text-decoration: none;">
+            Créer un compte
+        </a>
+    </p>
 </div>
 
 <div class="container" id="dashboardView">
@@ -268,6 +275,86 @@
             }
         } catch (err) {
             console.error("Impossible de récupérer la config PayPal depuis le serveur", err);
+        }
+    }
+
+    // --- NOUVEAU : FONCTION DE DEMANDE D'INSCRIPTION ---
+    async function showRegistrationForm() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Demande d\'inscription',
+            html: `
+                <div style="text-align: left;">
+                    <input id="reg-firstname" class="swal2-input" placeholder="Prénom" style="width: 85%;">
+                    <input id="reg-lastname" class="swal2-input" placeholder="Nom" style="width: 85%;">
+                    <input id="reg-email" type="email" class="swal2-input" placeholder="Email (Lycée de préférence)" style="width: 85%;">
+                    <input id="reg-password" type="password" class="swal2-input" placeholder="Mot de passe" style="width: 85%;">
+                    
+                    <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9em; border-left: 4px solid #3498db;">
+                        <label style="display: flex; align-items: flex-start; cursor: pointer;">
+                            <input type="checkbox" id="reg-rgpd" style="margin-top: 4px; margin-right: 10px; transform: scale(1.3);">
+                            <span>J'accepte que mes données personnelles soient utilisées par le Lycée Isaac Newton dans le cadre du service <b>Newton Charge</b>, conformément au RGPD.</span>
+                        </label>
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Soumettre la demande',
+            cancelButtonText: 'Annuler',
+            confirmButtonColor: '#27ae60',
+            width: '500px',
+            preConfirm: () => {
+                const firstName = document.getElementById('reg-firstname').value.trim();
+                const lastName = document.getElementById('reg-lastname').value.trim();
+                const email = document.getElementById('reg-email').value.trim();
+                const password = document.getElementById('reg-password').value;
+                const rgpdConsent = document.getElementById('reg-rgpd').checked;
+
+                if (!firstName || !lastName || !email || !password) {
+                    Swal.showValidationMessage('Veuillez remplir tous les champs.');
+                    return false;
+                }
+                if (!rgpdConsent) {
+                    Swal.showValidationMessage('Vous devez accepter les conditions RGPD pour continuer.');
+                    return false;
+                }
+                
+                // Basique vérification email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    Swal.showValidationMessage('Veuillez entrer une adresse email valide.');
+                    return false;
+                }
+
+                return { firstName, lastName, email, password, rgpdConsent };
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({ title: 'Envoi en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/request-registration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formValues)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Demande envoyée !',
+                        text: 'Votre demande a bien été transmise. Vous recevrez un email dès qu\'un administrateur aura validé votre compte.'
+                    });
+                } else {
+                    Swal.fire('Erreur', data.error || 'Erreur lors de la demande.', 'error');
+                }
+            } catch (error) {
+                console.error("Erreur Inscription:", error);
+                Swal.fire('Erreur réseau', 'Impossible de contacter le serveur.', 'error');
+            }
         }
     }
 
