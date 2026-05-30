@@ -64,7 +64,7 @@ Voici l'état en direct du lycée :
 
         // --- 2. REQUÊTE À GEMINI ---
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
+            model: "gemini-1.5-flash-latest",
             systemInstruction: systemPrompt
         });
 
