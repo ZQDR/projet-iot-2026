@@ -76,6 +76,6 @@ Voici l'état en direct du lycée :
 
     } catch (error) {
         console.error("Erreur ChatController :", error);
-        res.status(500).json({ error: "Erreur de communication avec l'IA.", reply: "Désolé, j'ai eu un problème de connexion avec mes serveurs neuraux 🧠." });
+        res.status(500).json({ error: "Erreur de communication avec l'IA.", reply: `⚠️ Erreur API Gemini : ${error.message}` });
     }
 };
