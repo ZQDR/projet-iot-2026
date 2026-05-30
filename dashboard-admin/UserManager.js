@@ -435,16 +435,10 @@ class UserManager {
     // --- NOUVEAU : GESTION DES DEMANDES EN ATTENTE ---
     
     initPendingRequestsUI() {
-        const bellBtn = document.createElement('button');
-        bellBtn.id = 'btnPendingRequests';
-        bellBtn.innerHTML = `🔔 Demandes <span id="reqBadge" style="background:#e74c3c; color:white; border-radius:50%; padding:2px 6px; font-size:12px; display:none; margin-left:5px;">0</span>`;
-        bellBtn.style.cssText = "position: fixed; bottom: 20px; right: 20px; z-index: 1000; padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-size: 14px; transition: 0.3s;";
-        
-        bellBtn.onmouseover = () => bellBtn.style.transform = "scale(1.05)";
-        bellBtn.onmouseout = () => bellBtn.style.transform = "scale(1)";
-        
-        bellBtn.addEventListener('click', () => this.showPendingRequestsModal());
-        document.body.appendChild(bellBtn);
+        const bellBtn = document.getElementById('btnPendingRequests');
+        if (bellBtn) {
+            bellBtn.addEventListener('click', () => this.showPendingRequestsModal());
+        }
     }
 
     async fetchPendingRequests(silent = false) {
@@ -628,7 +622,7 @@ class UserManager {
                 if (result.success) {
                     Swal.fire('Succès !', 'Utilisateur créé.', 'success');
                     // On utilise l'ID retourné par l'API (result.data.userId)
-                    const username = `${firstName} + " " + ${lastName}`;
+                    const username = `${firstName} ${lastName}`;
                     this.addUserToDashboard(result.data.userId, username, creditAmount);
                 } else {
                     Swal.fire('Erreur', result.message, 'error');
