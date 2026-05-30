@@ -36,15 +36,28 @@ const generateAccessToken = async () => {
 };
 
 module.exports = {
-    // Créer une commande PayPal
-    createOrder: async (amount) => {
+    // Créer une commande PayPal (Version Corrigée et Sécurisée)
+    createOrder: async (amount, returnUrl, cancelUrl) => {
         const accessToken = await generateAccessToken();
         if (!accessToken) throw new Error("Token d'accès manquant.");
 
         const url = `${base}/v2/checkout/orders`;
+        
+        // L'architecture cible : On injecte les instructions de routage et le bouton de paiement immédiat
         const payload = {
             intent: 'CAPTURE',
-            purchase_units: [{ amount: { currency_code: 'EUR', value: parseFloat(amount).toFixed(2) } }],
+            purchase_units: [{ 
+                amount: { 
+                    currency_code: 'EUR', 
+                    value: parseFloat(amount).toFixed(2) 
+                } 
+            }],
+            application_context: {
+                return_url: returnUrl,
+                cancel_url: cancelUrl,
+                user_action: 'PAY_NOW',          // ⚡ Force l'affichage du bouton "Payer" au lieu de "Continuer"
+                shipping_preference: 'NO_SHIPPING' // ⚡ Supprime la demande d'adresse de livraison (gain de temps UX)
+            }
         };
         const response = await fetch(url, {
             headers: {
