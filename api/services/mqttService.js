@@ -188,7 +188,11 @@ const mqttService = {
                             });
                             
                             // Notification Push (App fermée)
-                            pushService.sendPushAlert(userId, '⚠️ Surcharge de puissance', "L'appareil branché dépasse la limite. La prise a été coupée par sécurité.");
+                            try {
+                                await pushService.sendPushAlert(userId, '⚠️ Surcharge de puissance', "L'appareil branché dépasse la limite. La prise a été coupée par sécurité.");
+                            } catch (pushErr) {
+                                console.error(`[Push Error] Surcharge de puissance :`, pushErr.message || pushErr);
+                            }
                         }
 
                         // Notifier l'Admin (Dashboard)
@@ -270,7 +274,11 @@ const mqttService = {
                                     });
                                     
                                     // Notification Push (App fermée)
-                                    pushService.sendPushAlert(userId, '💸 Solde épuisé', "Votre solde est à 0€. La session a été arrêtée automatiquement.");
+                                    try {
+                                        await pushService.sendPushAlert(userId, '💸 Solde épuisé', "Votre solde est à 0€. La session a été arrêtée automatiquement.");
+                                    } catch (pushErr) {
+                                        console.error(`[Push Error] Solde épuisé :`, pushErr.message || pushErr);
+                                    }
                                 }
                             }
                         }

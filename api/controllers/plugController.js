@@ -231,7 +231,11 @@ exports.forceStopCharge = async (req, res) => {
             });
             
             // Notification Push (App fermée)
-            pushService.sendPushAlert(userId, '🛑 Arrêt forcé', `Un administrateur a coupé votre prise ${plugId}.`);
+            try {
+                await pushService.sendPushAlert(userId, '🛑 Arrêt forcé', `Un administrateur a coupé votre prise ${plugId}.`);
+            } catch (pushErr) {
+                console.error(`[Push Error] Arrêt forcé sur la prise ${plugId} :`, pushErr.message || pushErr);
+            }
         }
 
         // 2. Extinction et libération de la prise
@@ -284,7 +288,11 @@ exports.toggleMaintenance = async (req, res) => {
                 });
                 
                 // Notification Push (App fermée)
-                pushService.sendPushAlert(userId, '🔧 Maintenance', `La prise ${plugId} a été mise en maintenance. Votre session est interrompue.`);
+                try {
+                    await pushService.sendPushAlert(userId, '🔧 Maintenance', `La prise ${plugId} a été mise en maintenance. Votre session est interrompue.`);
+                } catch (pushErr) {
+                    console.error(`[Push Error] Maintenance sur la prise ${plugId} :`, pushErr.message || pushErr);
+                }
             }
 
             // 2. Mettre en maintenance et éteindre électriquement
