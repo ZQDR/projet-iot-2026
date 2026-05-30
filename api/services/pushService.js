@@ -19,7 +19,7 @@ const initExpo = async () => {
 };
 
 const pushService = {
-    sendPushAlert: async (userId, title, messageBody) => {
+    sendPushAlert: async (userId, title, messageBody, dataPayload = {}) => {
         try {
             // On s'assure que le SDK Expo est bien chargé avant de l'utiliser
             await initExpo();
@@ -41,7 +41,8 @@ const pushService = {
                 to: pushToken,
                 sound: 'default',
                 title: title || '🔌 Alerte Newton',
-                body: messageBody
+                body: messageBody,
+                data: dataPayload
             }];
 
             let chunks = expoInstance.chunkPushNotifications(messages);

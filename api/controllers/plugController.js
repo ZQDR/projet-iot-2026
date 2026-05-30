@@ -232,7 +232,7 @@ exports.forceStopCharge = async (req, res) => {
             
             // Notification Push (App fermée)
             try {
-                await pushService.sendPushAlert(userId, '🛑 Arrêt forcé', `Un administrateur a coupé votre prise ${plugId}.`);
+                await pushService.sendPushAlert(userId, '🛑 Arrêt forcé', `Un administrateur a coupé votre prise ${plugId}.`, { action: "disconnect", sessionId: session.id });
             } catch (pushErr) {
                 console.error(`[Push Error] Arrêt forcé sur la prise ${plugId} :`, pushErr.message || pushErr);
             }
