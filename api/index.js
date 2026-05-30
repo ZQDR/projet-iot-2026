@@ -8,6 +8,7 @@ const socketService = require('./services/socketService');
 const mqttService = require('./services/mqttService');
 
 // Routes
+const chatController = require('./controllers/chatController');
 const authRoutes = require('./routes/auth');
 const plugRoutes = require('./routes/plugs');
 const consumptionRoutes = require('./routes/consumption');
@@ -37,6 +38,9 @@ app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/plugs', '/plugs'], plugRoutes);
 app.use(['/api/consumption', '/consumption'], consumptionRoutes);
 app.use(['/api/payment', '/payment', '/api/payments', '/payments'], paymentRoutes);
+
+// Route Chatbot (Copilote IA)
+app.post(['/api/chat', '/chat'], chatController.handleChat);
 
 // Route de documentation Swagger (Accessible via Nginx proxy sur /api/api-docs)
 app.use(['/api-docs', '/api/api-docs'], swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
