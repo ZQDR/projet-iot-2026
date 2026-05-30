@@ -4,6 +4,7 @@ const paypalService = require('../services/paypalService');
 const socketService = require('../services/socketService');
 const stripe = require('../services/stripeService');
 const db = require('../config/db'); // Nécessaire pour vérifier les doublons
+const emailService = require('../services/emailService');
 
 // ÉTAPE 1 : Le Front demande la permission de payer (Appelé par createOrder dans paypalManager.js)
 exports.createPayPalOrder = async (req, res) => {
@@ -101,6 +102,13 @@ exports.capturePayPalOrder = async (req, res) => {
 
                 // Notifier les dashboards du changement de solde
                 socketService.emit('user_data_updated', { userId: userId });
+
+                // 3. Envoyer le reçu par email
+                try {
+                    await emailService.sendPaymentReceipt(user.email, user.username, amountFloat, newBalance, 'PayPal', orderId);
+                } catch (emailErr) {
+                    console.error("⚠️ Erreur lors de l'envoi de l'email PayPal :", emailErr.message);
+                }
 
                 res.json({
                     message: 'Paiement réussi ! Solde mis à jour.',
@@ -223,6 +231,13 @@ exports.verifyStripeSession = async (req, res) => {
                     console.error("⚠️ Erreur log transaction Stripe :", txErr.message);
                 }
                 socketService.emit('user_data_updated', { userId: userId });
+
+                // Envoi de l'email de reçu
+                try {
+                    await emailService.sendPaymentReceipt(user.email, user.username, amountFloat, newBalance, 'Carte Bancaire (Stripe)', sessionId);
+                } catch (emailErr) {
+                    console.error("⚠️ Erreur lors de l'envoi de l'email Stripe :", emailErr.message);
+                }
 
                 return res.json({ message: 'Paiement Stripe validé !', newBalance: newBalance.toFixed(2) });
             }

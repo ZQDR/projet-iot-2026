@@ -8,102 +8,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Application Élève - Lycée Newton</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <!-- Chargement du nouveau thème minimaliste N&B -->
+    <link rel="stylesheet" href="theme-premium.css">
     <script src="./app.js" defer></script>
 </head>
 <body>
 
-<div class="container" id="loginView">
-    <h2>🔐 Connexion Élève</h2>
-    <div class="form-group">
-        <label>Email :</label>
-        <input type="email" id="emailInput" placeholder="jean.dupont@eleve.fr">
-    </div>
-    <div class="form-group">
-        <label>Mot de passe :</label>
-        <input type="password" id="passwordInput" placeholder="••••••••">
-    </div>
-    <button class="btn-primary" onclick="login()">Se connecter</button>
-    <p id="loginError" style="color: red; text-align: center; display: none;"></p>
-    
-    <p style="text-align: center; margin-top: 15px;">
-        Nouveau membre ? 
-        <a href="#" onclick="showRegistrationForm(); return false;" style="color: #3498db; font-weight: bold; text-decoration: none;">
-            Créer un compte
-        </a>
-    </p>
-</div>
-
-<div class="container" id="dashboardView">
-    <h2>⚡ Lycée Newton</h2>
-    <p style="text-align: center;">Bienvenue, <strong id="userName">...</strong></p>
-
-    <div class="balance-container">
-        <div>Crédit disponible</div>
-        <div class="balance-amount"><span id="userBalance">--</span> €</div>
-        <div class="progress-bg"><div class="progress-fill" id="balanceProgressBar" style="width: 0%;"></div></div>
-        <span class="progress-text">Plafond maximum : 100.00 €</span>
-    </div>
-<div class="card">
-    <h3>Recharger mon compte</h3>
-    <select id="amountToPay">
-        <option value="5.00">5.00 €</option>
-        <option value="10.00" selected>10.00 €</option>
-        <option value="20.00">20.00 €</option>
-    </select>
-    <div id="paypal-button-container" style="margin-top: 15px;"></div>
-    <button class="btn-primary" style="background-color: #635bff; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="payWithStripe()">
-        💳 Payer par Carte Bancaire
-    </button>
-</div>
-
-    <div class="card" id="activeSessionsCard" style="display: none; border-left: 4px solid var(--primary);">
-        <h3>⚡ Mes charges en cours</h3>
-        <div id="activeSessionsList"></div>
+    <div class="dashboard-wrapper" id="loginView">
+        <div class="premium-card">
+            <h2 style="text-align: center; margin-top: 0; margin-bottom: 1.5rem;">🔐 Connexion Élève</h2>
+            
+            <div style="margin-bottom: 15px;">
+                <div class="title-sm">Email</div>
+                <input type="email" id="emailInput" class="premium-input" placeholder="jean.dupont@eleve.fr">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <div class="title-sm">Mot de passe</div>
+                <input type="password" id="passwordInput" class="premium-input" placeholder="••••••••">
+            </div>
+            
+            <button class="btn-black" onclick="login()">Se connecter</button>
+            <p id="loginError" style="color: #dc3545; text-align: center; display: none; margin-top: 15px; font-size: 0.9rem;"></p>
+            
+            <p style="text-align: center; margin-top: 20px; font-size: 0.9rem;">
+                Nouveau membre ? 
+                <a href="#" onclick="showRegistrationForm(); return false;" style="color: var(--accent-black); font-weight: bold; text-decoration: none; border-bottom: 1px solid var(--accent-black);">
+                    Créer un compte
+                </a>
+            </p>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label>Sélectionnez la prise :</label>
-        <select id="plugId" class="form-select" onchange="resetDisplays()">
-            <option value="">Chargement des prises...</option>
-        </select>
-        
-        <button class="btn-start" onclick="startCharge()">Démarrer la charge</button>
+    <div class="dashboard-wrapper" id="dashboardView" style="display: none;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 style="margin: 0; font-size: 1.5rem;">⚡ Newton Charge</h2>
+            <p style="color: var(--text-secondary); margin-top: 5px;">Bienvenue, <strong id="userName" style="color: var(--text-primary);">...</strong></p>
+        </div>
+
+        <!-- Carte Solde -->
+        <div class="premium-card" id="balanceCard">
+            <div class="title-sm">Crédit disponible</div>
+            <div class="balance-amount"><span id="userBalance">--</span> <span class="balance-currency">€</span></div>
+            <div style="margin-top: 15px;">
+                <div style="width: 100%; background: var(--border-color); height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div id="balanceProgressBar" style="width: 0%; background: var(--accent-black); height: 100%; transition: width 0.4s ease;"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px; text-align: right;">Plafond maximum : 100.00 €</div>
+            </div>
+        </div>
+
+        <!-- Carte Rechargement -->
+        <div class="premium-card">
+            <div class="title-sm" style="margin-bottom: 10px;">Recharger mon compte</div>
+            <select id="amountToPay" class="premium-input" style="margin-bottom: 15px;">
+                <option value="5.00">5.00 €</option>
+                <option value="10.00" selected>10.00 €</option>
+                <option value="20.00">20.00 €</option>
+            </select>
+            <div id="paypal-button-container"></div>
+            <button class="btn-outline" style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="payWithStripe()">
+                💳 Payer par Carte Bancaire
+            </button>
+        </div>
+
+        <!-- Sessions Actives (Apparaît si session en cours) -->
+        <div class="premium-card" id="activeSessionsCard" style="display: none; border-left: 4px solid var(--accent-black);">
+            <div class="title-sm">⚡ Mes charges en cours</div>
+            <div id="activeSessionsList" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- Scanner / Démarrer Prise -->
+        <div class="premium-card">
+            <div class="title-sm" style="margin-bottom: 10px;">Sélectionnez la prise</div>
+            <select id="plugId" class="premium-input" style="margin-bottom: 15px;" onchange="resetDisplays()">
+                <option value="">Chargement des prises...</option>
+            </select>
+            
+            <button class="btn-black" onclick="startCharge()">Démarrer la charge</button>
+            
+            <div class="status-box" id="realTimeStatus" style="margin-top: 20px; padding: 15px; background: var(--bg-base); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.9rem;">
+                <div id="plugStateDisplay" style="margin-bottom: 5px;">📡 Statut : En attente...</div>
+                <div id="plugPowerDisplay" style="margin-bottom: 5px;">⚡ Puissance : 0 W</div>
+                <div id="plugEnergyDisplay" style="margin-bottom: 5px;">📈 Énergie : 0.0 Wh</div>
+                <div id="plugCostDisplay">💰 Coût de session : 0.00 €</div>
+            </div>
+        </div>
+
+        <!-- Section Historique -->
+        <button id="btnToggleHistory" class="btn-outline" style="margin-top: 10px; text-align: left; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span>📊 Historique & Transactions</span> <span>▼</span>
+        </button>
+
+        <div id="historySection" class="premium-card" style="display: none; margin-top: 10px; padding: 1.5rem; max-height: 400px; overflow-y: auto;">
+            <div class="title-sm">⚡ Dernières Charges</div>
+            <div id="consumptionHistoryList" style="font-size: 0.9em; margin-top: 10px; margin-bottom: 25px;">Chargement...</div>
+
+            <div class="title-sm">💳 Dernières Transactions</div>
+            <div id="transactionHistoryList" style="font-size: 0.9em; margin-top: 10px;">Chargement...</div>
+        </div>
+
+        <!-- Section RGPD -->
+        <button id="btnToggleRGPD" class="btn-outline" style="margin-top: 10px; text-align: left; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span>⚙️ Paramètres de vie privée</span> <span>▼</span>
+        </button>
+
+        <div id="rgpdSection" class="premium-card" style="display: none; margin-top: 10px; padding: 1.5rem;">
+            <div class="title-sm">🛡️ Vie privée</div>
+            <p style="font-size: 0.9em; color: var(--text-secondary); margin-top: 10px; margin-bottom: 15px;">Gérez vos données personnelles conformément au RGPD.</p>
+            <button id="btnExportRGPD" class="btn-black" style="margin-bottom: 10px;">💾 Exporter mes données</button>
+            <button id="btnDeleteAccountRGPD" class="btn-outline" style="color: #dc3545; border-color: #dc3545;">🗑️ Supprimer mon compte</button>
+        </div>
+
+        <button class="btn-outline" style="margin-top: 2rem; border: none; color: var(--text-secondary); display: block; margin-left: auto; margin-right: auto; width: auto;" onclick="logout()">Se déconnecter</button>
     </div>
 
-    <div class="status-box" id="realTimeStatus">
-        <div id="plugStateDisplay">📡 Statut de la prise : En attente...</div>
-        <div id="plugPowerDisplay">⚡ Puissance : 0 W</div>
-        <div id="plugEnergyDisplay">📈 Énergie : 0.0 Wh</div>
-        <div id="plugCostDisplay">💰 Coût de session : 0.00 €</div>
-    </div>
-
-    <button id="btnToggleHistory" class="btn-logout" style="background-color: #17a2b8; margin-top: 20px; text-align: left; padding: 12px 15px;">
-        📊 Historique & Transactions <span style="float: right;">▼</span>
-    </button>
-
-    <div id="historySection" class="card" style="display: none; margin-top: 10px; border-left: 4px solid #17a2b8; max-height: 400px; overflow-y: auto; padding-right: 15px;">
-        <h3 style="margin-top: 0; font-size: 1.2em;">⚡ Dernières Charges</h3>
-        <div id="consumptionHistoryList" style="font-size: 0.9em; margin-bottom: 20px;">Chargement...</div>
-
-        <h3 style="margin-top: 0; font-size: 1.2em;">💳 Dernières Transactions</h3>
-        <div id="transactionHistoryList" style="font-size: 0.9em;">Chargement...</div>
-    </div>
-
-    <button id="btnToggleRGPD" class="btn-logout" style="background-color: #6c757d; margin-top: 20px; text-align: left; padding: 12px 15px;">
-        ⚙️ Paramètres de vie privée (RGPD) <span style="float: right;">▼</span>
-    </button>
-
-    <div id="rgpdSection" class="card" style="display: none; margin-top: 10px; border-left: 4px solid #343a40;">
-        <h3 style="margin-top: 0;">🛡️ Vie privée</h3>
-        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Gérez vos données personnelles conformément au RGPD.</p>
-        <button id="btnExportRGPD" class="btn-primary" style="background-color: #17a2b8; margin-bottom: 10px;">💾 Exporter mes données (JSON)</button>
-        <button id="btnDeleteAccountRGPD" class="btn-stop" style="margin-top: 0;">🗑️ Supprimer mon compte</button>
-    </div>
-
-    <button class="btn-logout" onclick="logout()">Déconnexion</button>
-</div>
-
-
+    <!-- Script d'animation pour faire pulser la carte lors d'un rechargement -->
+    <script>
+        document.addEventListener('balanceUpdated', () => {
+            const card = document.getElementById('balanceCard');
+            if(card) {
+                card.classList.remove('balance-updated');
+                void card.offsetWidth; // Déclenche le reflow
+                card.classList.add('balance-updated');
+            }
+        });
+    </script>
 </body>
 </html>

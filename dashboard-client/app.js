@@ -12,9 +12,9 @@ function updateBalanceUI(balanceValue) {
     const progressBar = document.getElementById('balanceProgressBar');
     progressBar.style.width = progressPercent + '%';
     
-    if (balance < 5) progressBar.style.background = 'var(--danger)';
-    else if (balance < 15) progressBar.style.background = '#fd7e14';
-    else progressBar.style.background = 'var(--primary)';
+    if (balance < 5) progressBar.style.background = '#dc3545';
+    else if (balance < 15) progressBar.style.background = '#f39c12';
+    else progressBar.style.background = 'var(--accent-black)';
 }
 
 document.addEventListener('balanceUpdated', (e) => {
@@ -47,15 +47,22 @@ async function showRegistrationForm() {
         title: 'Demande d\'inscription',
         html: `
             <div style="text-align: left;">
-                <input id="reg-firstname" class="swal2-input" placeholder="Prénom" style="width: 85%;">
-                <input id="reg-lastname" class="swal2-input" placeholder="Nom" style="width: 85%;">
-                <input id="reg-email" type="email" class="swal2-input" placeholder="Email (Lycée de préférence)" style="width: 85%;">
-                <input id="reg-password" type="password" class="swal2-input" placeholder="Mot de passe" style="width: 85%;">
+                <div class="title-sm" style="margin-bottom: 5px;">Prénom</div>
+                <input id="reg-firstname" class="swal2-input" placeholder="Ex: Jean">
                 
-                <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9em; border-left: 4px solid #3498db;">
+                <div class="title-sm" style="margin-bottom: 5px; margin-top: 15px;">Nom</div>
+                <input id="reg-lastname" class="swal2-input" placeholder="Ex: Dupont">
+                
+                <div class="title-sm" style="margin-bottom: 5px; margin-top: 15px;">Email</div>
+                <input id="reg-email" type="email" class="swal2-input" placeholder="jean.dupont@eleve.fr">
+                
+                <div class="title-sm" style="margin-bottom: 5px; margin-top: 15px;">Mot de passe</div>
+                <input id="reg-password" type="password" class="swal2-input" placeholder="••••••••">
+                
+                <div style="margin-top: 25px; background: var(--bg-base); padding: 15px; border-radius: var(--radius-md); font-size: 0.9em; border: 1px solid var(--border-color);">
                     <label style="display: flex; align-items: flex-start; cursor: pointer;">
-                        <input type="checkbox" id="reg-rgpd" style="margin-top: 4px; margin-right: 10px; transform: scale(1.3);">
-                        <span>J'accepte que mes données personnelles soient utilisées par le Lycée Isaac Newton dans le cadre du service <b>Newton Charge</b>, conformément au RGPD.</span>
+                        <input type="checkbox" id="reg-rgpd" style="margin-top: 2px; margin-right: 12px; transform: scale(1.2); accent-color: var(--accent-black);">
+                        <span style="color: var(--text-secondary); line-height: 1.4;">J'accepte l'utilisation de mes données pour <b>Newton Charge</b> (RGPD).</span>
                     </label>
                 </div>
             </div>
@@ -64,7 +71,6 @@ async function showRegistrationForm() {
         showCancelButton: true,
         confirmButtonText: 'Soumettre la demande',
         cancelButtonText: 'Annuler',
-        confirmButtonColor: '#27ae60',
         width: '500px',
         preConfirm: () => {
             const firstName = document.getElementById('reg-firstname').value.trim();
@@ -302,7 +308,7 @@ async function stopSpecificCharge(targetPlugId) {
         text: "Votre session sera terminée et facturée.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
+        customClass: { confirmButton: 'swal2-danger' },
         confirmButtonText: 'Oui, arrêter',
         cancelButtonText: 'Annuler'
     });
@@ -462,13 +468,16 @@ async function loadUserHistory() {
                     const date = new Date(session.start_time).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
                     const cost = parseFloat(session.cost || 0).toFixed(2);
                     const energy = parseFloat(session.energy_kwh || 0).toFixed(3);
-                    return `<div style="padding: 8px 0; border-bottom: 1px solid #ddd;">
-                        <strong>Prise ${session.plug_id}</strong> - <span style="color:#666;">${date}</span><br>
-                        Énergie : ${energy} kWh | Coût : <b style="color:var(--primary);">${cost} €</b>
+                    return `<div style="padding: 12px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: var(--text-primary);">Prise ${session.plug_id}</strong><br>
+                            <span style="color: var(--text-secondary); font-size: 0.85em;">${date} • ${energy} kWh</span>
+                        </div>
+                        <strong style="color: var(--text-primary); font-size: 1.1em;">${cost} €</strong>
                     </div>`;
                 }).join('');
             } else {
-                consContainer.innerHTML = '<p style="color: #777;">Aucune charge récente.</p>';
+                consContainer.innerHTML = '<p style="color: var(--text-secondary);">Aucune charge récente.</p>';
             }
 
             const transContainer = document.getElementById('transactionHistoryList');
@@ -476,15 +485,17 @@ async function loadUserHistory() {
                 transContainer.innerHTML = data.transactions.map(tx => {
                     const date = new Date(tx.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
                     const amount = parseFloat(tx.amount).toFixed(2);
-                    const color = tx.amount >= 0 ? 'green' : 'red';
                     const sign = tx.amount > 0 ? '+' : '';
-                    return `<div style="padding: 8px 0; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size:0.95em;"><span style="color:#666; font-size:0.9em;">${date}</span><br>${tx.description || tx.type}</span>
-                        <strong style="color: ${color}; font-size:1.1em;">${sign}${amount} €</strong>
+                    return `<div style="padding: 12px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: var(--text-primary);">${tx.description || tx.type}</strong><br>
+                            <span style="color: var(--text-secondary); font-size: 0.85em;">${date}</span>
+                        </div>
+                        <strong style="color: var(--text-primary); font-size: 1.1em;">${sign}${amount} €</strong>
                     </div>`;
                 }).join('');
             } else {
-                transContainer.innerHTML = '<p style="color: #777;">Aucune transaction récente.</p>';
+                transContainer.innerHTML = '<p style="color: var(--text-secondary);">Aucune transaction récente.</p>';
             }
         }
     } catch (err) {
@@ -587,7 +598,6 @@ function initWebSocket() {
                 text: data.message || "Votre solde est épuisé. La prise a été coupée automatiquement.",
                 icon: popupIcon,
                 confirmButtonText: confirmText,
-                confirmButtonColor: '#3498db',
                 allowOutsideClick: false
             }).then((result) => {
                 if (result.isConfirmed && showRecharge) {
