@@ -437,7 +437,15 @@ class UserManager {
     initPendingRequestsUI() {
         const bellBtn = document.getElementById('btnPendingRequests');
         if (bellBtn) {
-            bellBtn.addEventListener('click', () => this.showPendingRequestsModal());
+            bellBtn.addEventListener('click', async () => {
+                // Si l'admin n'est pas authentifié, on force la connexion
+                if (!this.token) {
+                    const logged = await this.loginAdmin();
+                    if (!logged) return;
+                }
+                // On interroge la base de données en direct avant d'afficher la fenêtre
+                this.fetchPendingRequests(false);
+            });
         }
     }
 
