@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "api-iot": "file:api",
     "expo-server-sdk": "^6.1.0",
     "express": "^5.2.1",

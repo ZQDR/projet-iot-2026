@@ -33,13 +33,13 @@ exports.handleChat = async (req, res) => {
             reply = `⚡ Il y a <b>${activeSessions[0].active} session(s)</b> de charge en cours en ce moment.`;
         }
         else {
-            reply = `🤖 <b>Mode Local</b> : Mon intelligence artificielle externe a été désactivée.<br><br>Posez-moi des questions simples comme :<br>- <i>"Quel est l'état des prises ?"</i><br>- <i>"Combien d'élèves sont inscrits ?"</i><br>- <i>"Combien de sessions en cours ?"</i>`;
+            reply = `🤖 <b>Mode Automatique</b> : Mon intelligence artificielle externe a été désactivée.<br><br>Posez-moi des questions simples comme :<br>- <i>"Quel est l'état des prises ?"</i><br>- <i>"Combien d'élèves sont inscrits ?"</i><br>- <i>"Combien de sessions en cours ?"</i>`;
         }
 
         return res.json({ reply });
 
     } catch (error) {
         console.error("Erreur ChatController :", error);
-        res.status(500).json({ error: "Erreur interne du chatbot local.", reply: `⚠️ Erreur locale : ${error.message}` });
+        res.status(500).json({ error: "Erreur de communication avec l'IA.", reply: `⚠️ Erreur locale : ${error.message}` });
     }
 };
