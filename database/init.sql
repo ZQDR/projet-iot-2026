@@ -1,8 +1,5 @@
 -- Fichier: database/init.sql
 
--- On s'assure d'utiliser la bonne base de données définie dans le docker-compose
-USE iot_project;
-
 -- 1. TABLE UTILISATEURS
 -- Stocke les infos des étudiants et leur crédit (solde)
 CREATE TABLE IF NOT EXISTS users (
@@ -73,4 +70,14 @@ VALUES (
     '$2b$10$uM7RrbJSqt.kSLEr.H9FUuUxBxrJJ9JS9HQH/7ldjmDCpKGSCCs9e', 
     'admin', 
     99999999
+);
+
+-- 6. TABLE DEMANDES D'INSCRIPTION (Salle d'attente)
+CREATE TABLE IF NOT EXISTS registration_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    rgpd_consent BOOLEAN NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
