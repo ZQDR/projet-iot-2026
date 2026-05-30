@@ -47,6 +47,47 @@ const emailService = {
             console.error(`[Email] ❌ Erreur lors de l'envoi de l'email à ${email} :`, error);
             return false;
         }
+    },
+
+    sendPaymentReceipt: async (email, username, amount, newBalance, paymentMethod, transactionId) => {
+        try {
+            if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+                console.warn(`[Email] ⚠️ Identifiants SMTP manquants dans le .env. Simulation du reçu pour ${email}`);
+                return true;
+            }
+
+            const mailOptions = {
+                from: `"Newton Charge" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                to: email,
+                subject: 'Reçu de paiement - Newton Charge',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                        <h2 style="color: #3498db; text-align: center;">Reçu de Paiement 🧾</h2>
+                        <p>Bonjour <b>${username}</b>,</p>
+                        <p>Nous vous confirmons la bonne réception de votre rechargement sur Newton Charge.</p>
+                        <ul style="background: #f8f9fa; padding: 15px; border-radius: 5px; list-style-type: none;">
+                            <li style="margin-bottom: 5px;">💰 <b>Montant rechargé :</b> ${parseFloat(amount).toFixed(2)} €</li>
+                            <li style="margin-bottom: 5px;">💳 <b>Moyen de paiement :</b> ${paymentMethod}</li>
+                            <li style="margin-bottom: 5px;">📈 <b>Nouveau solde :</b> ${parseFloat(newBalance).toFixed(2)} €</li>
+                            <li style="margin-bottom: 5px;">🆔 <b>N° de transaction :</b> ${transactionId}</li>
+                        </ul>
+                        <p style="margin-top: 20px;">Merci pour votre confiance !</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://recharge.cielnewton.fr" style="background-color: #27ae60; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Accéder à mon compte</a>
+                        </div>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="font-size: 0.8em; color: #7f8c8d; text-align: center;">Ceci est un message automatique, merci de ne pas y répondre.</p>
+                    </div>
+                `
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`[Email] ✅ Reçu de paiement envoyé à ${email} (Message ID: ${info.messageId})`);
+            return true;
+        } catch (error) {
+            console.error(`[Email] ❌ Erreur lors de l'envoi du reçu à ${email} :`, error);
+            return false;
+        }
     }
 };
 
