@@ -64,11 +64,11 @@ Voici l'état en direct du lycée :
 
         // --- 2. REQUÊTE À GEMINI ---
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash-latest",
-            systemInstruction: systemPrompt
+            model: "gemini-pro"
         });
 
-        const result = await model.generateContent(message);
+        const finalPrompt = `${systemPrompt}\n\n--- Question de l'administrateur ---\n${message}`;
+        const result = await model.generateContent(finalPrompt);
         const responseText = result.response.text();
 
         // --- 3. RETOUR AU DASHBOARD ---
