@@ -232,6 +232,7 @@ exports.forceStopCharge = async (req, res) => {
             
             // Notification Push (App fermée)
             try {
+                console.log(`[Push Debug] Arrêt forcé - userId: ${userId}, sessionId: ${session.id}`);
                 await pushService.sendPushAlert(userId, '🛑 Arrêt forcé', `Un administrateur a coupé votre prise ${plugId}.`, { action: "disconnect", sessionId: session.id });
             } catch (pushErr) {
                 console.error(`[Push Error] Arrêt forcé sur la prise ${plugId} :`, pushErr.message || pushErr);
@@ -289,7 +290,8 @@ exports.toggleMaintenance = async (req, res) => {
                 
                 // Notification Push (App fermée)
                 try {
-                    await pushService.sendPushAlert(userId, '🔧 Maintenance', `La prise ${plugId} a été mise en maintenance. Votre session est interrompue.`);
+                    console.log(`[Push Debug] Maintenance - userId: ${userId}, sessionId: ${session.id}`);
+                    await pushService.sendPushAlert(userId, '🔧 Maintenance', `La prise ${plugId} a été mise en maintenance. Votre session est interrompue.`, { action: "disconnect", sessionId: session.id });
                 } catch (pushErr) {
                     console.error(`[Push Error] Maintenance sur la prise ${plugId} :`, pushErr.message || pushErr);
                 }

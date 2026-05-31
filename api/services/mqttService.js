@@ -189,7 +189,8 @@ const mqttService = {
                             
                             // Notification Push (App fermée)
                             try {
-                                await pushService.sendPushAlert(userId, '⚠️ Surcharge de puissance', "L'appareil branché dépasse la limite. La prise a été coupée par sécurité.");
+                                console.log(`[Push Debug] Surcharge de puissance - userId: ${userId}, sessionId: ${activeSession.id}`);
+                                await pushService.sendPushAlert(userId, '⚠️ Surcharge de puissance', "L'appareil branché dépasse la limite. La prise a été coupée par sécurité.", { action: "disconnect", sessionId: activeSession.id });
                             } catch (pushErr) {
                                 console.error(`[Push Error] Surcharge de puissance :`, pushErr.message || pushErr);
                             }
@@ -275,7 +276,8 @@ const mqttService = {
                                     
                                     // Notification Push (App fermée)
                                     try {
-                                        await pushService.sendPushAlert(userId, '💸 Solde épuisé', "Votre solde est à 0€. La session a été arrêtée automatiquement.");
+                                        console.log(`[Push Debug] Solde épuisé - userId: ${userId}, sessionId: ${activeSession.id}`);
+                                        await pushService.sendPushAlert(userId, '💸 Solde épuisé', "Votre solde est à 0€. La session a été arrêtée automatiquement.", { action: "disconnect", sessionId: activeSession.id });
                                     } catch (pushErr) {
                                         console.error(`[Push Error] Solde épuisé :`, pushErr.message || pushErr);
                                     }
