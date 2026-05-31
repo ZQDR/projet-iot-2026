@@ -11,6 +11,14 @@ const initExpo = async () => {
         if (!globalThis.File) {
             globalThis.File = require('node:buffer').File;
         }
+        
+        // Polyfill pour Node.js 18 : undici tente d'utiliser toWellFormed() qui n'existe que depuis Node.js 20
+        if (!String.prototype.toWellFormed) {
+            String.prototype.toWellFormed = function () {
+                // Pour une simple URL envoyée à Expo, retourner la chaîne telle quelle suffit pour éviter le plantage
+                return String(this);
+            };
+        }
 
         const expoModule = await import('expo-server-sdk');
         ExpoClass = expoModule.Expo;
